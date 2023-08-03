@@ -1,0 +1,968 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "systolics - OpenAPI 3.0",
+    "description": "This is the public API of systolics based on the OpenAPI 3.0 specification.  You can find out more about\nsystolics at [https://systolics.de](https://systolics.de). \nThe use of this API requires an existing organization account with systolics.",
+    "termsOfService": "https://systolics.de/terms",
+    "contact": {
+      "email": "apiteam@systolics.de"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "1.0.0"
+  },
+  "externalDocs": {
+    "description": "Find out more about systolics",
+    "url": "https://systolics.de"
+  },
+  "servers": [
+    {
+      "url": "http://{host}:{port}",
+      "description": "Platform API of systolics",
+      "variables": {
+        "host": {
+          "default": "localhost",
+          "description": "points to the application running locally"
+        },
+        "port": {
+          "default": "8000"
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "name": "Survey",
+      "description": "Survey handling"
+    },
+    {
+      "name": "Authentication",
+      "description": "Providing details on the authentication flows"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "GoalDefinition": {
+        "type": "object",
+        "required": [
+          "targetMetric",
+          "target"
+        ],
+        "properties": {
+          "targetMetric": {
+            "type": "object",
+            "properties": {
+              "cube": {
+                "type": "string"
+              },
+              "metricName": {
+                "type": "string"
+              }
+            }
+          },
+          "target": {
+            "type": "object",
+            "required": [
+              "value"
+            ],
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "timeSlice": {
+                "type": "string",
+                "enum": [
+                  "day",
+                  "workweek",
+                  "week",
+                  "month",
+                  "quarter",
+                  "year"
+                ]
+              }
+            }
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "member",
+                "operator"
+              ],
+              "properties": {
+                "member": {
+                  "type": "string",
+                  "example": "Leistungen.Gattung"
+                },
+                "operator": {
+                  "type": "string",
+                  "enum": [
+                    "equals",
+                    "contains",
+                    "gte"
+                  ]
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Goal": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "Identifier of an individual goal"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number",
+            "example": "1"
+          },
+          "dateChanged": {
+            "type": "string"
+          },
+          "dateCreated": {
+            "type": "string"
+          },
+          "userIdCreated": {
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/GoalDefinition"
+          }
+        }
+      }
+    },
+    "responses": {
+      "NonSuccess": {
+        "description": "Response for a non successful transaction, due to invalid input data",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "GENERAL_ERROR"
+                },
+                "reqId": {
+                  "type": "string",
+                  "example": "eb1a02a0-3127-11ee-9c39-d3744f94121",
+                  "description": "Request id useful for debugging and traceability."
+                },
+                "msg": {
+                  "type": "string",
+                  "example": "An error occurred processing your request.",
+                  "description": "Details about the failure of the request"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/org/{orgId}/goals/radar": {
+      "get": {
+        "tags": [
+          "Goal-Definitions"
+        ],
+        "description": "Retrieving a list of goal definitions for an organization",
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "name": "orgId",
+            "in": "path",
+            "description": "The id of the organization",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A paged array of pets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Goal"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/NonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonSuccess"
+          },
+          "500": {
+            "$ref": "#/components/responses/NonSuccess"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Goal-Definitions"
+        ],
+        "description": "Creating a goal definition item",
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "name": "orgId",
+            "in": "path",
+            "description": "The id of the organization",
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "description": "Request parameters in JSON format",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "definition"
+                ],
+                "properties": {
+                  "definition": {
+                    "$ref": "#/components/schemas/GoalDefinition"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A newly created goal definition.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Goal"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/NonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonSuccess"
+          },
+          "500": {
+            "$ref": "#/components/responses/NonSuccess"
+          }
+        }
+      }
+    },
+    "/org/{orgId}/goals/radar/{goalId}": {
+      "get": {
+        "tags": [
+          "Goal-Definitions"
+        ],
+        "description": "Retrieving one goal definition for an organization",
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "name": "orgId",
+            "in": "path",
+            "description": "The id of the organization",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "name": "goalId",
+            "in": "path",
+            "description": "The id of the individual goal definition",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of goal definitions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Goal"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/NonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonSuccess"
+          },
+          "500": {
+            "$ref": "#/components/responses/NonSuccess"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Goal-Definitions"
+        ],
+        "description": "Updating a goal item definition",
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "name": "orgId",
+            "in": "path",
+            "description": "The id of the organization",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "name": "goalId",
+            "in": "path",
+            "description": "The id of the individual goal definition",
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "description": "Request parameters in JSON format",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "definition"
+                ],
+                "properties": {
+                  "definition": {
+                    "$ref": "#/components/schemas/GoalDefinition"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A paged array of pets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Goal"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/NonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonSuccess"
+          },
+          "500": {
+            "$ref": "#/components/responses/NonSuccess"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Goal-Definitions"
+        ],
+        "description": "Removing a goal definition item",
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "name": "orgId",
+            "in": "path",
+            "description": "The id of the organization",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "name": "goalId",
+            "in": "path",
+            "description": "The id of the individual goal definition",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Confirmation about the goal item being removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "deletedGoaldId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/NonSuccess"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonSuccess"
+          },
+          "500": {
+            "$ref": "#/components/responses/NonSuccess"
+          }
+        }
+      }
+    },
+    "/org/{orgId}/survey": {
+      "get": {
+        "tags": [
+          "Survey"
+        ],
+        "summary": "Get surveys",
+        "description": "Get a list of all surveys (as a survey template which can be filled out)",
+        "operationId": "getSurveyTemplates",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "description": "Identifier of the organization",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "surveys": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/paths/~1org~1%7BorgId%7D~1survey/post/responses/200/content/application~1json/schema"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "404": {
+            "description": "Pet not found"
+          },
+          "405": {
+            "description": "Validation exception"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "description": "Identifier of the organization",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Survey"
+        ],
+        "summary": "Add a new survey template",
+        "description": "Creating a new survey template that may be used. If _id is provided, update is tried. Else, creating a new survey template instance. We implement the schema used and/or generated by surveyjs.io",
+        "operationId": "addSurveyTemplate",
+        "requestBody": {
+          "description": "Create a new survey template",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "flagIsActive": {
+                    "type": "boolean",
+                    "description": "Depicts if new replies may be gathered from people filling out that template"
+                  },
+                  "targetAudience": {
+                    "type": "string",
+                    "enum": [
+                      "patients",
+                      "employees"
+                    ]
+                  },
+                  "locale": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "logoPosition": {
+                    "type": "string"
+                  },
+                  "pages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "elements": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "radiogroup",
+                                  "comment",
+                                  "tagbox",
+                                  "dropdown",
+                                  "checkbox",
+                                  "rating"
+                                ]
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Depicts the identifier of the question"
+                              },
+                              "visibleIf": {
+                                "type": "string"
+                              },
+                              "choices": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/paths/~1org~1%7BorgId%7D~1survey/post/requestBody/content/application~1json/schema"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "description": "Identifier of the survey template, referenced from other objects as \"surveyTemplateId\""
+                        },
+                        "dateCreated": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "dateChanged": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "userIdCreated": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": [
+          {
+            "access_token": []
+          }
+        ]
+      }
+    },
+    "/org/{orgId}/survey/{surveyTemplateId}": {
+      "get": {
+        "tags": [
+          "Survey"
+        ],
+        "summary": "Get an individual survey",
+        "description": "Get a list of all surveys (as a survey template which can be filled out)",
+        "operationId": "getSingleSurveyTemplate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "description": "Identifier of the organization",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "surveyTemplateId",
+            "required": true,
+            "description": "Identifier of a survey template",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/paths/~1org~1%7BorgId%7D~1survey/post/responses/200/content/application~1json/schema"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID supplied"
+          },
+          "404": {
+            "description": "Pet not found"
+          },
+          "405": {
+            "description": "Validation exception"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ]
+      }
+    },
+    "/org/{orgId}/survey/reply": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "description": "Identifier of the organization",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Survey"
+        ],
+        "summary": "Add a new reply of a survey",
+        "description": "Storing a survey reply from a person filling out a specific survey template",
+        "operationId": "addSurveyReply",
+        "requestBody": {
+          "description": "New reply from one person filling out a survey",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "surveyTemplateId": {
+                    "type": "string"
+                  },
+                  "replyData": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                },
+                "example": "{\"surveyTemplateId\" : \"61aa799f3fff12c3732d65e1\", \"replyData\" : {\"frage_1\":{\"tortenelem\":\"1\"},\"geschlecht\":\"weiblich\",\"frage_2\":4,\"frage_3\":[\"freies Mittagessen\", \"flexible Arbeitszeiten\"],\"frage_checkbox\": true} }"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "SUCCESS"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "description": "A guid depicting a single reply."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": [
+          {
+            "accessToken": []
+          }
+        ]
+      }
+    },
+    "/org/{orgId}/survey/external/reply": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "description": "Identifier of the organization",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Survey"
+        ],
+        "summary": "Storing a batch of new survey replies",
+        "description": "Batch storing of new survey replies. This endpoint is supposed to be for programmatic integrations pushing new survey data.",
+        "operationId": "addSurveyReplyBatches",
+        "requestBody": {
+          "description": "Create new replies from multiple persons filling out a survey template",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "description": "The data provided from external survey tools may be ingested for analysis into the systolics pipelines. The sourceIdentifier in combination with the surveyReplyId for each reply dataset, determine that / how the data will be overwritten once pushed.",
+                  "properties": {
+                    "sourceTitle": {
+                      "type": "string",
+                      "description": "Provide a short identifier of the source of the survey results",
+                      "example": "Microsoft Forms"
+                    },
+                    "replies": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "replyId": {
+                            "type": "string"
+                          },
+                          "userIdCreated": {
+                            "type": "string",
+                            "description": "If an identifier is connected with a person filling out a survey, this may be added here."
+                          },
+                          "replyData": {
+                            "type": "object",
+                            "additionalProperties": true
+                          }
+                        },
+                        "required": [
+                          "replyId",
+                          "replyData"
+                        ]
+                      }
+                    }
+                  },
+                  "example": "{\"sourceTitle\" : \"Microsoft Forms\", \"replyId\" : \"abc-unique-id-123\", \"replyData\" : [{\"frage_1\":{\"tortenelem\":\"1\"},\"geschlecht\":\"weiblich\",\"frage_2\":4,\"frage_3\":[\"freies Mittagessen\", \"flexible Arbeitszeiten\"],\"frage_checkbox\": true}]}",
+                  "required": [
+                    "sourceTitle",
+                    "replies"
+                  ]
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "SUCCESS"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "description": "A guid depicting a single reply."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Invalid input"
+          }
+        },
+        "security": [
+          {
+            "apiKey": []
+          },
+          {
+            "accessToken": []
+          }
+        ]
+      }
+    }
+  }
+}

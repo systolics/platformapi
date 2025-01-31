@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://api.systolics.de",
+      "url": "https://api.systolics.de/v01",
       "description": "Platform API"
     }
   ],
@@ -341,9 +341,7 @@
             }
           }
         }
-      }
-    },
-    "/v01/bp/{orgId}/apikey": {
+      },
       "post": {
         "summary": "Create a new API key",
         "description": "Generates a new API key for the specified business partner (BP). The request must be authenticated using a Bearer token.",
@@ -484,7 +482,7 @@
         }
       }
     },
-    "/v01/bp/{orgId}/apikey/{apiKeyPrefix}": {
+    "/bp/{orgId}/apikey/{apiKeyPrefix}": {
       "put": {
         "summary": "Update API Key Scopes",
         "description": "Updates the list of scopes assigned to an existing API key.",

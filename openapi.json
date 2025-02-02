@@ -1,838 +1,253 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "systolics - OpenAPI 3.0",
-    "description": "This is the public API of systolics based on the OpenAPI 3.0 specification.  You can find out more about\nsystolics at [https://systolics.de](https://systolics.de). \nThe use of this API requires an existing organization account with systolics.",
-    "termsOfService": "https://systolics.de/terms",
-    "contact": {
-      "email": "apiteam@systolics.de"
-    },
-    "license": {
-      "name": "Apache 2.0",
-      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-    },
-    "version": "1.0.0"
-  },
-  "externalDocs": {
-    "description": "Find out more about systolics",
-    "url": "https://systolics.de"
+    "title": "systolics API",
+    "version": "1.0.0",
+    "description": "API documentation for systolics"
   },
   "servers": [
     {
-      "url": "http://{host}:{port}",
-      "description": "Platform API of systolics",
-      "variables": {
-        "host": {
-          "default": "localhost",
-          "description": "points to the application running locally"
-        },
-        "port": {
-          "default": "8000"
-        }
-      }
-    }
-  ],
-  "tags": [
-    {
-      "name": "Survey",
-      "description": "Survey handling"
-    },
-    {
-      "name": "Authentication",
-      "description": "Providing details on the authentication flows"
+      "url": "https://api.systolics.de/v01",
+      "description": "Platform API"
     }
   ],
   "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-systolics-apikey",
+        "description": "API Key required to obtain a JWT token."
+      },
+      "accessToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT authorization header using the Bearer scheme."
+      }
+    },
     "schemas": {
-      "GoalDefinition": {
+      "SuccessResponse": {
         "type": "object",
-        "required": [
-          "targetMetric",
-          "target"
-        ],
         "properties": {
-          "targetMetric": {
-            "type": "object",
-            "properties": {
-              "cube": {
-                "type": "string"
-              },
-              "metricName": {
-                "type": "string"
-              }
-            }
+          "success": {
+            "type": "boolean",
+            "example": true
           },
-          "target": {
-            "type": "object",
-            "required": [
-              "value"
-            ],
-            "properties": {
-              "value": {
-                "type": "number"
-              },
-              "timeSlice": {
-                "type": "string",
-                "enum": [
-                  "day",
-                  "workweek",
-                  "week",
-                  "month",
-                  "quarter",
-                  "year"
-                ]
-              }
-            }
+          "message": {
+            "type": "string",
+            "example": "Operation successful"
           },
-          "filters": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": [
-                "member",
-                "operator"
-              ],
-              "properties": {
-                "member": {
-                  "type": "string",
-                  "example": "Leistungen.Gattung"
-                },
-                "operator": {
-                  "type": "string",
-                  "enum": [
-                    "equals",
-                    "contains",
-                    "gte"
-                  ]
-                },
-                "values": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
+          "data": {
+            "description": "Flexible data container that can be either an object or an array.",
+            "oneOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "array"
               }
-            }
+            ]
           }
         }
       },
-      "Goal": {
+      "ErrorResponse": {
         "type": "object",
         "properties": {
-          "_id": {
+          "key": {
             "type": "string",
-            "description": "Identifier of an individual goal"
+            "description": "Depicts a string constant for the error type",
+            "example": "GENERAL_ERROR"
           },
-          "orgId": {
-            "type": "string"
-          },
-          "version": {
-            "type": "number",
-            "example": "1"
-          },
-          "dateChanged": {
-            "type": "string"
-          },
-          "dateCreated": {
-            "type": "string"
-          },
-          "userIdCreated": {
-            "type": "string"
-          },
-          "friendlyName": {
+          "reqId": {
             "type": "string",
-            "example": "Umsatzziel Praxis ABC"
+            "description": "Request ID for tracing the error",
+            "example": "4a900ef0-dfbe-11ef-add6-bf069a8357f6"
           },
-          "definition": {
-            "$ref": "#/components/schemas/GoalDefinition"
+          "msg": {
+            "type": "string",
+            "description": "Error message",
+            "example": "An error occurred."
           }
         }
-      }
-    },
-    "responses": {
-      "NonSuccess": {
-        "description": "Response for a non successful transaction, due to invalid input data",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "key": {
-                  "type": "string",
-                  "example": "GENERAL_ERROR"
-                },
-                "reqId": {
-                  "type": "string",
-                  "example": "eb1a02a0-3127-11ee-9c39-d3744f94121",
-                  "description": "Request id useful for debugging and traceability."
-                },
-                "msg": {
-                  "type": "string",
-                  "example": "An error occurred processing your request.",
-                  "description": "Details about the failure of the request"
-                }
-              }
-            }
+      },
+      "AuthErrorMessage": {
+        "type": "object",
+        "properties": {
+          "auth": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Access not allowed."
+          }
+        }
+      },
+      "AuthToken": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Request operation result key",
+            "example": "SUCCESS"
+          },
+          "token": {
+            "type": "string",
+            "description": "JWT token for accessing secured endpoints of the affiliated organization.",
+            "example": "eyJhbGciOiJIUzI1NiIsIn..."
           }
         }
       }
     }
   },
-  "security": [
-    {
-      "bearerAuth": []
-    }
-  ],
   "paths": {
-    "/org/{orgId}/goals/radar": {
+    "/auth/scopes": {
       "get": {
+        "summary": "Obtain Access Token for a service user via its API Key",
+        "description": "Use an API Key to obtain a JWT token for authentication to protected organization resources",
         "tags": [
-          "Goal-Definitions"
+          "Authentication"
         ],
-        "description": "Retrieving a list of goal definitions for an organization",
         "security": [
           {
             "accessToken": []
           }
         ],
+        "x-token-required-scopes": [
+          "*"
+        ],
         "parameters": [
           {
+            "in": "query",
+            "name": "type",
+            "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "platform",
+                "partner",
+                "org"
+              ]
             },
-            "name": "orgId",
-            "in": "path",
-            "description": "The id of the organization",
-            "required": true
+            "description": "Description of the type of organization for which scopes are requested"
           }
         ],
         "responses": {
           "200": {
-            "description": "A paged array of pets",
+            "description": "Successfully authenticated, returns JWT token.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "key": {
+                    "scope": {
                       "type": "string",
-                      "example": "success"
+                      "description": "The scope as the string representation of the requested permission level"
                     },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Goal"
-                      }
+                    "title": {
+                      "type": "string",
+                      "description": "The title of the token"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "The full-text representation of the access permission"
+                    },
+                    "uiCategory": {
+                      "type": "string",
+                      "description": "The category which for the scope"
+                    },
+                    "flagAssignableForBpOrg": {
+                      "type": "boolean",
+                      "description": "Flag identifying when scopes are requested that a BP can be assigned for by a organization (impersonation)"
+                    },
+                    "flagCanBeAssignedToApiKey": {
+                      "type": "boolean",
+                      "description": "Flag identifying when scopes are requested that a BP can be assigned for by a organization (impersonation)7"
                     }
                   }
                 }
               }
             }
           },
-          "400": {
-            "$ref": "#/components/responses/NonSuccess"
-          },
-          "404": {
-            "$ref": "#/components/responses/NonSuccess"
-          },
           "500": {
-            "$ref": "#/components/responses/NonSuccess"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Goal-Definitions"
-        ],
-        "description": "Creating a goal definition item",
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "name": "orgId",
-            "in": "path",
-            "description": "The id of the organization",
-            "required": true
-          }
-        ],
-        "requestBody": {
-          "description": "Request parameters in JSON format",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "definition"
-                ],
-                "properties": {
-                  "friendlyName": {
-                    "type": "string",
-                    "example": "Umsatzziel Praxis ABC"
-                  },
-                  "definition": {
-                    "$ref": "#/components/schemas/GoalDefinition"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "A newly created goal definition.",
+            "description": "Error happened during the request of the scopes",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/Goal"
-                    }
-                  }
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
-          },
-          "400": {
-            "$ref": "#/components/responses/NonSuccess"
-          },
-          "404": {
-            "$ref": "#/components/responses/NonSuccess"
-          },
-          "500": {
-            "$ref": "#/components/responses/NonSuccess"
           }
         }
       }
     },
-    "/org/{orgId}/goals/radar/{goalId}": {
+    "/auth/services/token": {
       "get": {
+        "summary": "Obtain JWT Token using API Key",
+        "description": "Use an API Key to obtain a JWT token for authentication.",
         "tags": [
-          "Goal-Definitions"
+          "Authentication"
         ],
-        "description": "Retrieving one goal definition for an organization",
         "security": [
           {
-            "accessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "name": "orgId",
-            "in": "path",
-            "description": "The id of the organization",
-            "required": true
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "name": "goalId",
-            "in": "path",
-            "description": "The id of the individual goal definition",
-            "required": true
+            "apiKey": []
           }
         ],
         "responses": {
           "200": {
-            "description": "A list of goal definitions",
+            "description": "Successfully authenticated, returns JWT token.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Goal"
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/AuthToken"
                 }
               }
             }
           },
-          "400": {
-            "$ref": "#/components/responses/NonSuccess"
-          },
-          "404": {
-            "$ref": "#/components/responses/NonSuccess"
-          },
-          "500": {
-            "$ref": "#/components/responses/NonSuccess"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Goal-Definitions"
-        ],
-        "description": "Updating a goal item definition",
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "name": "orgId",
-            "in": "path",
-            "description": "The id of the organization",
-            "required": true
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "name": "goalId",
-            "in": "path",
-            "description": "The id of the individual goal definition",
-            "required": true
-          }
-        ],
-        "requestBody": {
-          "description": "Request parameters in JSON format",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "definition"
-                ],
-                "properties": {
-                  "friendlyName": {
-                    "type": "string",
-                    "example": "Umsatzziel Praxis ABC"
-                  },
-                  "definition": {
-                    "$ref": "#/components/schemas/GoalDefinition"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "A paged array of pets",
+          "403": {
+            "description": "Access forbidden",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/Goal"
-                    }
-                  }
+                  "$ref": "#/components/schemas/AuthErrorMessage"
                 }
               }
             }
-          },
-          "400": {
-            "$ref": "#/components/responses/NonSuccess"
-          },
-          "404": {
-            "$ref": "#/components/responses/NonSuccess"
-          },
-          "500": {
-            "$ref": "#/components/responses/NonSuccess"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Goal-Definitions"
-        ],
-        "description": "Removing a goal definition item",
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "name": "orgId",
-            "in": "path",
-            "description": "The id of the organization",
-            "required": true
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "name": "goalId",
-            "in": "path",
-            "description": "The id of the individual goal definition",
-            "required": true
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Confirmation about the goal item being removed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "deletedGoaldId": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/NonSuccess"
-          },
-          "404": {
-            "$ref": "#/components/responses/NonSuccess"
-          },
-          "500": {
-            "$ref": "#/components/responses/NonSuccess"
           }
         }
       }
     },
-    "/org/{orgId}/survey": {
+    "/bp/{orgId}/apikey": {
       "get": {
+        "summary": "List the existing API Keys for a business partner organization",
+        "description": "List all API Keys for a business partner organization, including their scopes and validity information",
         "tags": [
-          "Survey"
+          "Partner - API Keys"
         ],
-        "summary": "Get surveys",
-        "description": "Get a list of all surveys (as a survey template which can be filled out)",
-        "operationId": "getSurveyTemplates",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "orgId",
-            "required": true,
-            "description": "Identifier of the organization",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "surveys": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/paths/~1org~1%7BorgId%7D~1survey/post/responses/200/content/application~1json/schema"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid ID supplied"
-          },
-          "404": {
-            "description": "Pet not found"
-          },
-          "405": {
-            "description": "Validation exception"
-          }
-        },
         "security": [
           {
             "accessToken": []
           }
-        ]
-      },
-      "post": {
+        ],
+        "x-token-required-scopes": [
+          "api-mgmt-keys"
+        ],
         "parameters": [
           {
             "in": "path",
             "name": "orgId",
             "required": true,
-            "description": "Identifier of the organization",
             "schema": {
               "type": "string"
-            }
-          }
-        ],
-        "tags": [
-          "Survey"
-        ],
-        "summary": "Add a new survey template",
-        "description": "Creating a new survey template that may be used. If _id is provided, update is tried. Else, creating a new survey template instance. We implement the schema used and/or generated by surveyjs.io",
-        "operationId": "addSurveyTemplate",
-        "requestBody": {
-          "description": "Create a new survey template",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "flagIsActive": {
-                    "type": "boolean",
-                    "description": "Depicts if new replies may be gathered from people filling out that template"
-                  },
-                  "targetAudience": {
-                    "type": "string",
-                    "enum": [
-                      "patients",
-                      "employees"
-                    ]
-                  },
-                  "locale": {
-                    "type": "string"
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "logoPosition": {
-                    "type": "string"
-                  },
-                  "pages": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
-                        },
-                        "elements": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "enum": [
-                                  "radiogroup",
-                                  "comment",
-                                  "tagbox",
-                                  "dropdown",
-                                  "checkbox",
-                                  "rating"
-                                ]
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "Depicts the identifier of the question"
-                              },
-                              "visibleIf": {
-                                "type": "string"
-                              },
-                              "choices": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string"
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/paths/~1org~1%7BorgId%7D~1survey/post/requestBody/content/application~1json/schema"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "_id": {
-                          "type": "string",
-                          "description": "Identifier of the survey template, referenced from other objects as \"surveyTemplateId\""
-                        },
-                        "dateCreated": {
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "dateChanged": {
-                          "type": "string",
-                          "format": "date-time"
-                        },
-                        "userIdCreated": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Invalid input"
-          }
-        },
-        "security": [
-          {
-            "access_token": []
-          }
-        ]
-      }
-    },
-    "/org/{orgId}/survey/{surveyTemplateId}": {
-      "get": {
-        "tags": [
-          "Survey"
-        ],
-        "summary": "Get an individual survey",
-        "description": "Get a list of all surveys (as a survey template which can be filled out)",
-        "operationId": "getSingleSurveyTemplate",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "orgId",
-            "required": true,
-            "description": "Identifier of the organization",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "surveyTemplateId",
-            "required": true,
-            "description": "Identifier of a survey template",
-            "schema": {
-              "type": "string"
-            }
+            },
+            "description": "The ID of the business partner organization for which the API keys are requested"
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/paths/~1org~1%7BorgId%7D~1survey/post/responses/200/content/application~1json/schema"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid ID supplied"
-          },
-          "404": {
-            "description": "Pet not found"
-          },
-          "405": {
-            "description": "Validation exception"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ]
-      }
-    },
-    "/org/{orgId}/survey/reply": {
-      "post": {
-        "parameters": [
-          {
-            "in": "path",
-            "name": "orgId",
-            "required": true,
-            "description": "Identifier of the organization",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "tags": [
-          "Survey"
-        ],
-        "summary": "Add a new reply of a survey",
-        "description": "Storing a survey reply from a person filling out a specific survey template",
-        "operationId": "addSurveyReply",
-        "requestBody": {
-          "description": "New reply from one person filling out a survey",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "surveyTemplateId": {
-                    "type": "string"
-                  },
-                  "replyData": {
-                    "type": "object",
-                    "additionalProperties": true
-                  }
-                },
-                "example": "{\"surveyTemplateId\" : \"61aa799f3fff12c3732d65e1\", \"replyData\" : {\"frage_1\":{\"tortenelem\":\"1\"},\"geschlecht\":\"weiblich\",\"frage_2\":4,\"frage_3\":[\"freies Mittagessen\", \"flexible Arbeitszeiten\"],\"frage_checkbox\": true} }"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful operation",
+            "description": "Successfully authenticated, returns JWT token.",
             "content": {
               "application/json": {
                 "schema": {
@@ -843,102 +258,141 @@
                       "example": "SUCCESS"
                     },
                     "data": {
-                      "type": "object",
-                      "properties": {
-                        "_id": {
-                          "type": "string",
-                          "description": "A guid depicting a single reply."
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "405": {
-            "description": "Invalid input"
-          }
-        },
-        "security": [
-          {
-            "accessToken": []
-          }
-        ]
-      }
-    },
-    "/org/{orgId}/survey/external/reply": {
-      "post": {
-        "parameters": [
-          {
-            "in": "path",
-            "name": "orgId",
-            "required": true,
-            "description": "Identifier of the organization",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "tags": [
-          "Survey"
-        ],
-        "summary": "Storing a batch of new survey replies",
-        "description": "Batch storing of new survey replies. This endpoint is supposed to be for programmatic integrations pushing new survey data.",
-        "operationId": "addSurveyReplyBatches",
-        "requestBody": {
-          "description": "Create new replies from multiple persons filling out a survey template",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "description": "The data provided from external survey tools may be ingested for analysis into the systolics pipelines. The sourceIdentifier in combination with the surveyReplyId for each reply dataset, determine that / how the data will be overwritten once pushed.",
-                  "properties": {
-                    "sourceTitle": {
-                      "type": "string",
-                      "description": "Provide a short identifier of the source of the survey results",
-                      "example": "Microsoft Forms"
-                    },
-                    "replies": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "replyId": {
-                            "type": "string"
-                          },
-                          "userIdCreated": {
+                          "apiKeyPrefix": {
                             "type": "string",
-                            "description": "If an identifier is connected with a person filling out a survey, this may be added here."
+                            "description": "Unique identifier prefix for the API key.",
+                            "example": "bp-76015df0df5511efb34539daeecdeef1"
                           },
-                          "replyData": {
-                            "type": "object",
-                            "additionalProperties": true
+                          "apiKeyMasked": {
+                            "type": "string",
+                            "description": "Masked API key for display purposes.",
+                            "example": "******iV6m"
+                          },
+                          "dateCreated": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Timestamp when the API key was created.",
+                            "example": "2025-01-30T21:59:21.679Z"
+                          },
+                          "activeEndpoints": {
+                            "type": "array",
+                            "description": "List of active endpoints associated with this API key.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "example": []
+                          },
+                          "scopes": {
+                            "type": "array",
+                            "description": "List of access scopes assigned to this API key.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "example": [
+                              "data-dwh-data-read"
+                            ]
+                          },
+                          "dateChanged": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "Timestamp when the API key was last modified.",
+                            "example": "2025-01-30T22:06:43.815Z"
+                          },
+                          "userIdChanged": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "User ID that last changed the API key, if applicable.",
+                            "example": null
+                          },
+                          "dateInvalidated": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "Timestamp when the API key was invalidated.",
+                            "example": "2025-01-30T22:10:45.476Z"
+                          },
+                          "userIdInvalidated": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "User ID that invalidated the API key.",
+                            "example": "668c5551fb7bbe6934d0f23f"
                           }
-                        },
-                        "required": [
-                          "replyId",
-                          "replyData"
-                        ]
+                        }
                       }
                     }
-                  },
-                  "example": "{\"sourceTitle\" : \"Microsoft Forms\", \"replyId\" : \"abc-unique-id-123\", \"replyData\" : [{\"frage_1\":{\"tortenelem\":\"1\"},\"geschlecht\":\"weiblich\",\"frage_2\":4,\"frage_3\":[\"freies Mittagessen\", \"flexible Arbeitszeiten\"],\"frage_checkbox\": true}]}",
-                  "required": [
-                    "sourceTitle",
-                    "replies"
-                  ]
+                  }
                 }
               }
             }
           },
-          "required": true
+          "500": {
+            "description": "Error happened during the request of the scopes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new API key",
+        "description": "Generates a new API key for the specified business partner (BP). The request must be authenticated using a Bearer token.",
+        "tags": [
+          "Partner - API Keys"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "x-token-required-scopes": [
+          "api-mgmt-keys"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The business partner ID for which the API key is being created."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "List of scopes assigned to the API key.",
+                    "example": [
+                      "data-dwh-data-read",
+                      "partner-owner"
+                    ]
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
           "200": {
-            "description": "Successful operation",
+            "description": "API key successfully created.",
             "content": {
               "application/json": {
                 "schema": {
@@ -951,9 +405,42 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "_id": {
+                        "apiKeyPrefix": {
                           "type": "string",
-                          "description": "A guid depicting a single reply."
+                          "description": "Unique identifier prefix for the API key.",
+                          "example": "bp-53ab3520df5811ef83e9479208803006"
+                        },
+                        "apiKeyMasked": {
+                          "type": "string",
+                          "description": "Masked API key for display purposes.",
+                          "example": "******XUWW"
+                        },
+                        "dateCreated": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "Timestamp when the API key was created.",
+                          "example": "2025-01-30T22:19:52.562Z"
+                        },
+                        "activeEndpoints": {
+                          "type": "array",
+                          "description": "List of active endpoints associated with this API key.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "example": []
+                        },
+                        "scopes": {
+                          "type": "array",
+                          "description": "List of access scopes assigned to this API key.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "example": []
+                        },
+                        "apiKeyClear": {
+                          "type": "string",
+                          "description": "The full API key in plain text (shown only once upon creation).",
+                          "example": "bp-53ab3520df5811ef83e9479208803006.BekBSEgkQK8FCO9t6qBqZ8h95KUddRoi0e6OceMHr8lMkniV"
                         }
                       }
                     }
@@ -962,19 +449,269 @@
               }
             }
           },
-          "405": {
-            "description": "Invalid input"
-          }
-        },
-        "security": [
-          {
-            "apiKey": []
+          "400": {
+            "description": "Bad request - Invalid input or missing required fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
+          "401": {
+            "description": "Unauthorized - Missing or invalid authentication token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bp/{orgId}/apikey/{apiKeyPrefix}": {
+      "put": {
+        "summary": "Update API Key Scopes",
+        "description": "Updates the list of scopes assigned to an existing API key.",
+        "tags": [
+          "Partner - API Keys"
+        ],
+        "security": [
           {
             "accessToken": []
           }
-        ]
+        ],
+        "x-token-required-scopes": [
+          "api-mgmt-keys"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The business partner ID associated with the API key."
+          },
+          {
+            "in": "path",
+            "name": "apiKeyPrefix",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique identifier prefix for the API key to update."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The new list of scopes to assign to the API key.",
+                    "example": [
+                      "data-dwh-data-read"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated API key scopes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "SUCCESS"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "apiKeyPrefix": {
+                          "type": "string",
+                          "description": "The unique identifier prefix for the updated API key.",
+                          "example": "bp-76015df0df5511efb34539daeecdeef1"
+                        },
+                        "scopes": {
+                          "type": "array",
+                          "description": "The updated list of scopes assigned to the API key.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "example": [
+                            "data-dwh-data-read"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid input or missing required fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid authentication token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found - The specified API key does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Invalidate (Delete) an API Key",
+        "description": "Marks an API key as invalid, preventing further use.",
+        "tags": [
+          "Partner - API Keys"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "x-token-required-scopes": [
+          "api-mgmt-keys-inactivate"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The business partner ID associated with the API key."
+          },
+          {
+            "in": "path",
+            "name": "apiKeyPrefix",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique identifier prefix for the API key to be invalidated."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully invalidated the API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "SUCCESS"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid input or missing required fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid authentication token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found - The specified API key does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     }
-  }
+  },
+  "tags": []
 }

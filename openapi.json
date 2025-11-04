@@ -711,6 +711,389 @@
           }
         }
       }
+    },
+    "/bp/{orgId}/instances/new": {
+      "post": {
+        "summary": "Create a new practice instance (unattended onboarding)",
+        "description": "Creates a new practice instance (organization) via unattended onboarding. This endpoint is designed for automated instance creation by business partners using API keys with the 'unattended-onboarding' scope. The endpoint will create a new organization, set up the organization owner user, and optionally create an admin user. Infrastructure setup and account validation emails are sent automatically. This endpoint requires (a) dedicated contractual agreement with systolics and  (b) a dedicated API key with the 'unattended-onboarding' scope. Further configuration (e.g. customization of registration flows) are  possible, but require specific configuration. Please contact your account manager for more information.",
+        "tags": [
+          "Partner - Onboarding"
+        ],
+        "security": [
+          {
+            "apiKey": []
+          }
+        ],
+        "x-token-required-scopes": [
+          "unattended-onboarding"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the business partner organization that is creating the new instance. This is derived from the API key used for authentication."
+          },
+          {
+            "in": "query",
+            "name": "flowType",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "orgowner",
+                "admin"
+              ]
+            },
+            "description": "Optional flow type for registration. Determines whether the user is registered as organization owner or admin. Only applicable if the business partner allows registration flow choices. Defaults to the business partner's default flow type."
+          },
+          {
+            "in": "query",
+            "name": "autoGeneratePassword",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Optional flag to auto-generate a strong password. Only applicable if the business partner allows registration flow choices. Defaults to true otherwise."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "name",
+                  "surname",
+                  "organization"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email address of the organization owner user",
+                    "example": "owner@medicalclinic.de"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "First name of the organization owner user",
+                    "example": "John"
+                  },
+                  "surname": {
+                    "type": "string",
+                    "description": "Last name of the organization owner user",
+                    "example": "Doe"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Password for the organization owner user; required if registration flow type is 'orgowner'. Must comply with strong requirements as per \"^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[+-;:~.!@#\\$%\\^&\\*])(?=.{8,})\"",
+                    "example": "SecurePassword123!"
+                  },
+                  "LANR": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Optional LANR (Lebenslange Arztnummer) for medical professionals, leave empty if not applicable.",
+                    "example": null
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Optional title of the user",
+                    "example": "Dr."
+                  },
+                  "mobilephone": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Optional mobile phone number",
+                    "example": null
+                  },
+                  "organization": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "street",
+                      "number",
+                      "zip",
+                      "kvCode",
+                      "city",
+                      "countryCode"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Name of the organization",
+                        "example": "Medical Clinic ABC"
+                      },
+                      "bstNumber": {
+                        "type": "number",
+                        "description": "BST number (Betriebsstättennummer). It is required for Germany (DE), place a 0 for private only clinics.",
+                        "example": 123456789
+                      },
+                      "street": {
+                        "type": "string",
+                        "description": "Street address",
+                        "example": "Main Street"
+                      },
+                      "number": {
+                        "type": "string",
+                        "description": "House number",
+                        "example": 42
+                      },
+                      "zip": {
+                        "type": "string",
+                        "description": "Postal code",
+                        "example": 10115
+                      },
+                      "kvCode": {
+                        "type": "number",
+                        "description": "KV code (Kassenärztliche Vereinigung). Please refer to the KV-Schlüsseltabellen for the correct KV code for your organization.",
+                        "example": 100
+                      },
+                      "city": {
+                        "type": "string",
+                        "description": "City name",
+                        "example": "Berlin"
+                      },
+                      "countryCode": {
+                        "type": "string",
+                        "enum": [
+                          "DE",
+                          "AT",
+                          "CH"
+                        ],
+                        "description": "Country code (ISO 3166-1 alpha-2)",
+                        "example": "DE"
+                      }
+                    }
+                  },
+                  "rebates": {
+                    "type": "object",
+                    "nullable": true,
+                    "description": "Optional rebate configuration for the organization. Contains rebate selection data.",
+                    "properties": {
+                      "legalNoticePartner": {
+                        "type": "boolean",
+                        "description": "Flag indicating if the legal notice for the partner rebate has been accepted",
+                        "example": true
+                      },
+                      "rebates": {
+                        "type": "array",
+                        "description": "Array of rebate IDs and codes to apply to the organization. The provided rebates are automatically selected and validated against available rebates of the partner account. Invalid items will be discarded.",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "Unique identifier of the rebate",
+                              "example": "507f1f77bcf86cd799439014"
+                            },
+                            "code": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Optional rebate code for reference",
+                              "example": "PARTNER_DISCOUNT_2025"
+                            }
+                          }
+                        },
+                        "example": [
+                          {
+                            "id": "507f1f77bcf86cd799439014",
+                            "code": "PARTNER_DISCOUNT_2025"
+                          },
+                          {
+                            "id": "507f1f77bcf86cd799439015",
+                            "code": null
+                          }
+                        ]
+                      }
+                    },
+                    "example": {
+                      "legalNoticePartner": true,
+                      "rebates": [
+                        {
+                          "id": "507f1f77bcf86cd799439014",
+                          "code": "PARTNER_DISCOUNT_2025"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully created a new practice instance. Returns the created organization, organization owner user, and optional admin user information along with pipeline execution status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "organization": {
+                          "type": "object",
+                          "properties": {
+                            "orgId": {
+                              "type": "string",
+                              "description": "Unique identifier of the created organization",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Name of the organization",
+                              "example": "Medical Clinic ABC"
+                            }
+                          }
+                        },
+                        "orgOwnerUser": {
+                          "type": "object",
+                          "properties": {
+                            "userId": {
+                              "type": "string",
+                              "description": "Unique identifier of the organization owner user",
+                              "example": "507f1f77bcf86cd799439012"
+                            },
+                            "email": {
+                              "type": "string",
+                              "format": "email",
+                              "description": "Email address of the organization owner user",
+                              "example": "owner@medicalclinic.de"
+                            }
+                          }
+                        },
+                        "adminUser": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "userId": {
+                              "type": "string",
+                              "description": "Unique identifier of the admin user (if created)",
+                              "example": "507f1f77bcf86cd799439013"
+                            },
+                            "email": {
+                              "type": "string",
+                              "format": "email",
+                              "description": "Email address of the admin user",
+                              "example": "admin@medicalclinic.de"
+                            }
+                          }
+                        },
+                        "pipeline": {
+                          "type": "object",
+                          "description": "Information about the onboarding pipeline execution",
+                          "properties": {
+                            "flagInfrastructureRunSuccess": {
+                              "type": "boolean",
+                              "description": "Whether infrastructure setup was successful",
+                              "example": true
+                            },
+                            "flagEmailSent": {
+                              "type": "boolean",
+                              "description": "Whether account validation email was sent",
+                              "example": true
+                            },
+                            "flagRegisterUserAsOrgOwner": {
+                              "type": "boolean",
+                              "description": "Whether the user was registered as organization owner",
+                              "example": true
+                            },
+                            "flagRegisterUserAsAdmin": {
+                              "type": "boolean",
+                              "description": "Whether an additional admin user was created",
+                              "example": false
+                            },
+                            "flagNewUserWasCreated": {
+                              "type": "boolean",
+                              "description": "Whether a new user was created",
+                              "example": true
+                            },
+                            "flagPartnerConnectionSuccess": {
+                              "type": "boolean",
+                              "description": "Whether partner connection was successful",
+                              "example": true
+                            },
+                            "flagAffiliateWithPartner": {
+                              "type": "boolean",
+                              "description": "Whether the organization was affiliated with the partner",
+                              "example": true
+                            },
+                            "flagAutoGeneratePassword": {
+                              "type": "boolean",
+                              "description": "Whether password was auto-generated",
+                              "example": false
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid input or missing required fields. This can occur if required fields are missing, email format is invalid, password is not strong enough, or organization information is incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid API key. The API key is either missing, invalid, or has expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorMessage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - The business partner organization is not activated for unattended onboarding, or the API key does not have the required 'unattended-onboarding' scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not acceptable - Invalid user or organization data. This can occur if the email is invalid, password is not strong enough, or organization data does not meet requirements.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error - An unexpected error occurred during the onboarding process.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "tags": []

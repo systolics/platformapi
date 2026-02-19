@@ -11,6 +11,28 @@
       "description": "Platform API"
     }
   ],
+  "tags": [
+    {
+      "name": "Coder - Dashboard",
+      "description": "Dashboard and overview endpoints for the Coder module"
+    },
+    {
+      "name": "Coder - Flows",
+      "description": "Management of analysis flows"
+    },
+    {
+      "name": "Coder - Patient",
+      "description": "Patient file and documentation access"
+    },
+    {
+      "name": "Coder - Analysis",
+      "description": "Analysis objects and action handles"
+    },
+    {
+      "name": "Coder - Settings",
+      "description": "Settings and configuration for the Coder module"
+    }
+  ],
   "components": {
     "securitySchemes": {
       "apiKey": {
@@ -96,6 +118,901 @@
             "type": "string",
             "description": "JWT token for accessing secured endpoints of the affiliated organization.",
             "example": "eyJhbGciOiJIUzI1NiIsIn..."
+          }
+        }
+      },
+      "CoderActionHandleStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected",
+          "deactivated",
+          "conflict",
+          "untouched"
+        ],
+        "description": "Status of an action handle"
+      },
+      "CoderDayChecksum": {
+        "type": "object",
+        "properties": {
+          "checksum": {
+            "type": "string",
+            "description": "MD5 checksum of the day's documentation"
+          },
+          "dateInserted": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CoderPatientTag": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "description": "Tag text/label"
+          },
+          "lastDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "source": {
+            "type": "string",
+            "description": "Source of the tag extraction"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "deletionReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateUpdated": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CoderPatientTagInput": {
+        "type": "object",
+        "description": "Input schema for creating or updating a patient tag",
+        "required": [
+          "tag",
+          "lastDate",
+          "source"
+        ],
+        "properties": {
+          "tag": {
+            "type": "string",
+            "description": "Tag text/label"
+          },
+          "lastDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Date (ISO 8601)"
+          },
+          "source": {
+            "type": "string",
+            "description": "Source of the tag extraction"
+          },
+          "deleted": {
+            "type": "boolean",
+            "default": false
+          },
+          "deletionReason": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "CoderPatientTagDeleteInput": {
+        "type": "object",
+        "description": "Input schema for soft-deleting a patient tag",
+        "required": [
+          "tag"
+        ],
+        "properties": {
+          "tag": {
+            "type": "string",
+            "description": "Tag text/label"
+          },
+          "deletionReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional reason for deletion"
+          }
+        }
+      },
+      "CoderPatientFile": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "MongoDB ObjectId"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "patientNumber": {
+            "type": "string",
+            "description": "Hashed patient identifier"
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateChanged": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updateData": {
+            "type": "object",
+            "properties": {
+              "dayChecksums": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/CoderDayChecksum"
+                },
+                "description": "Map of date strings to checksum objects"
+              },
+              "lastContentModificationDate": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "lastDataReceived": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderPatientTag"
+            }
+          }
+        }
+      },
+      "CoderDocumentationItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "diag",
+              "anamnesis",
+              "procedure",
+              "therapy",
+              "medication",
+              "forms",
+              "lab",
+              "communication",
+              "admin",
+              "gop",
+              "other"
+            ],
+            "description": "Type of documentation entry"
+          },
+          "shortType": {
+            "type": "string",
+            "description": "Short type code from PVS"
+          },
+          "shortTypeLang": {
+            "type": "string",
+            "description": "Human-readable type label"
+          },
+          "documentationDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "documentationText": {
+            "type": "string"
+          },
+          "patientNumber": {
+            "type": "integer"
+          },
+          "patientNumberPVS": {
+            "type": "integer"
+          },
+          "caseId": {
+            "type": "string"
+          },
+          "checksum": {
+            "type": "string",
+            "nullable": true
+          },
+          "state": {
+            "type": "object"
+          }
+        }
+      },
+      "CoderDocumentationItemGOP": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CoderDocumentationItem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "GOP": {
+                "type": "string",
+                "description": "GOP code"
+              },
+              "GOPText": {
+                "type": "string"
+              },
+              "GOPLANR": {
+                "type": "string"
+              },
+              "GOType": {
+                "type": "string"
+              },
+              "GOPBstNumber": {
+                "type": "string"
+              },
+              "monetaryValue": {
+                "type": "number"
+              },
+              "GOPFactor": {
+                "type": "number",
+                "nullable": true
+              },
+              "GOPComment": {
+                "type": "string",
+                "nullable": true
+              },
+              "GOPDocName": {
+                "type": "string"
+              },
+              "gopPVSDocShortHand": {
+                "type": "string"
+              },
+              "flagStatistics": {
+                "type": "boolean"
+              },
+              "flagIsIndividualFactor": {
+                "type": "boolean",
+                "nullable": true
+              }
+            }
+          }
+        ]
+      },
+      "CoderDocumentationItemMedication": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CoderDocumentationItem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "medicationName": {
+                "type": "string",
+                "nullable": true
+              },
+              "dosage": {
+                "type": "string",
+                "nullable": true
+              },
+              "prescriptionId": {
+                "type": "string",
+                "nullable": true
+              },
+              "pzn": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          }
+        ]
+      },
+      "CoderPatientFileDay": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "patientNumber": {
+            "type": "string"
+          },
+          "documentationDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateChanged": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "documentation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderDocumentationItem"
+            }
+          },
+          "state": {
+            "type": "object"
+          }
+        }
+      },
+      "CoderPaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Cursor for next page"
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Whether more items are available"
+          }
+        }
+      },
+      "CoderActionHandleUserEdit": {
+        "type": "object",
+        "properties": {
+          "userIdCreated": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoderActionHandleStatus"
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "CoderActionHandleSummary": {
+        "type": "object",
+        "description": "Summary of an action handle embedded in an analysis object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoderActionHandleStatus"
+          },
+          "dateUpdated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "monetaryValue": {
+            "type": "number",
+            "nullable": true
+          }
+        }
+      },
+      "CoderActionHandle": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "patientNumber": {
+            "type": "string"
+          },
+          "analysisObjectId": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CoderActionHandleStatus"
+          },
+          "sourceRuleId": {
+            "type": "string",
+            "description": "ID of the rule that generated this action handle"
+          },
+          "monetaryValue": {
+            "type": "number",
+            "nullable": true
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateUpdated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "userEdit": {
+            "$ref": "#/components/schemas/CoderActionHandleUserEdit"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Rule-specific payload data"
+          }
+        }
+      },
+      "CoderAnalysisObject": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "patientNumber": {
+            "type": "string"
+          },
+          "flowId": {
+            "type": "string"
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateChanged": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actionHandles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderActionHandleSummary"
+            },
+            "description": "Summary list of action handles"
+          }
+        }
+      },
+      "CoderFlow": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "friendlyName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateChanged": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CoderFlowInput": {
+        "type": "object",
+        "properties": {
+          "friendlyName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "friendlyName"
+        ]
+      },
+      "CoderDashboardActionHandleCounts": {
+        "type": "object",
+        "properties": {
+          "pending": {
+            "type": "integer"
+          },
+          "approved": {
+            "type": "integer"
+          },
+          "rejected": {
+            "type": "integer"
+          },
+          "untouched": {
+            "type": "integer"
+          }
+        }
+      },
+      "CoderDashboardAnalysisStats": {
+        "type": "object",
+        "properties": {
+          "countPatients": {
+            "type": "integer"
+          },
+          "countActionHandles": {
+            "$ref": "#/components/schemas/CoderDashboardActionHandleCounts"
+          }
+        }
+      },
+      "CoderDashboardFlowItem": {
+        "type": "object",
+        "properties": {
+          "flowId": {
+            "type": "string"
+          },
+          "friendlyName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "analysisObjects": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "$ref": "#/components/schemas/CoderDashboardAnalysisStats"
+              },
+              "recently": {
+                "$ref": "#/components/schemas/CoderDashboardAnalysisStats"
+              }
+            }
+          },
+          "lastRun": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "success",
+                  "error",
+                  "running"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "CoderDashboardResponse": {
+        "type": "object",
+        "properties": {
+          "flows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderDashboardFlowItem"
+            }
+          }
+        }
+      },
+      "CoderAnalysisListObjectSummary": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "flowId": {
+            "type": "string"
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateChanged": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actionHandleSummary": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "pending": {
+                "type": "integer"
+              },
+              "approved": {
+                "type": "integer"
+              },
+              "rejected": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "CoderAnalysisListItem": {
+        "type": "object",
+        "properties": {
+          "patientNumber": {
+            "type": "string",
+            "description": "Hashed patient identifier"
+          },
+          "patientNumberPVS": {
+            "type": "string",
+            "nullable": true,
+            "description": "PVS patient number"
+          },
+          "pendingCount": {
+            "type": "integer",
+            "description": "Total pending action handles for this patient"
+          },
+          "totalMonetaryValue": {
+            "type": "number",
+            "nullable": true,
+            "description": "Sum of monetary values"
+          },
+          "latestUpdate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "analysisObjects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderAnalysisListObjectSummary"
+            }
+          }
+        }
+      },
+      "CoderAnalysisListResponse": {
+        "type": "object",
+        "description": "Response for /list/analysis - patients with analysis results",
+        "properties": {
+          "patients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderAnalysisListItem"
+            }
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Whether more results are available"
+          },
+          "totalCount": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Total count (may be null for performance)"
+          }
+        }
+      },
+      "CoderPatientFileListItem": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "patientNumber": {
+            "type": "string",
+            "description": "Hashed patient identifier"
+          },
+          "patientNumberPVS": {
+            "type": "string",
+            "description": "PVS patient number (if available)"
+          },
+          "dateCreated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateChanged": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updateData": {
+            "type": "object",
+            "properties": {
+              "lastDataReceived": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "lastContentModificationDate": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "sex": {
+            "type": "string",
+            "nullable": true,
+            "description": "Patient sex (m/w/d)"
+          },
+          "dayOfBirth": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "coverages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Insurance coverage information"
+          },
+          "analysisObjects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderAnalysisObject"
+            },
+            "description": "Analysis objects for this patient (only included if flagIncludeAnalysisObjects=true)"
+          }
+        }
+      },
+      "CoderPatientFileListResponse": {
+        "type": "object",
+        "description": "Response for /list/patients - patient files sorted by modification date",
+        "properties": {
+          "patients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderPatientFileListItem"
+            }
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Whether more results are available"
+          },
+          "totalCount": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Total count (may be null for performance)"
+          }
+        }
+      },
+      "CoderActivityResponse": {
+        "type": "object",
+        "description": "Response for /patient/:patientNumber/activity - recent analysis objects",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderAnalysisObject"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Cursor value for next page"
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "Whether more items are available"
+          }
+        }
+      },
+      "CoderTriggerAnalysisResponse": {
+        "type": "object",
+        "description": "Response for triggering a patient analysis",
+        "properties": {
+          "triggered": {
+            "type": "boolean",
+            "description": "Whether the analysis was triggered"
+          }
+        }
+      },
+      "CoderFileShortType": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "shortType": {
+            "type": "string",
+            "description": "Short type code from PVS"
+          },
+          "shortTypeLang": {
+            "type": "string",
+            "description": "Human-readable label"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "diag",
+              "anamnesis",
+              "procedure",
+              "therapy",
+              "medication",
+              "forms",
+              "lab",
+              "communication",
+              "admin",
+              "gop",
+              "other"
+            ],
+            "description": "Mapped documentation type"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of occurrences"
+          },
+          "flagAutoClassified": {
+            "type": "boolean"
+          },
+          "dateUpdated": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CoderFileShortTypeInput": {
+        "type": "object",
+        "properties": {
+          "fileShortType": {
+            "type": "object",
+            "properties": {
+              "shortType": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "diag",
+                  "anamnesis",
+                  "procedure",
+                  "therapy",
+                  "medication",
+                  "forms",
+                  "lab",
+                  "communication",
+                  "admin",
+                  "gop",
+                  "other"
+                ]
+              }
+            },
+            "required": [
+              "shortType",
+              "type"
+            ]
+          }
+        },
+        "required": [
+          "fileShortType"
+        ]
+      },
+      "CoderFileShortTypesResponse": {
+        "type": "object",
+        "properties": {
+          "fileShortTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderFileShortType"
+            }
+          },
+          "flagClassificationInProgress": {
+            "type": "boolean",
+            "description": "Whether auto-classification is still running"
+          },
+          "allowedTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of allowed documentation types"
           }
         }
       }
@@ -1094,7 +2011,2291 @@
           }
         }
       }
+    },
+    "/optimizer/{orgId}/coder/filetypes": {
+      "get": {
+        "summary": "Get File Short Types",
+        "description": "Returns all file short types for the organization.\nFile short types are used to categorize documentation entries.\nReturns status 202 if classification is still in progress.\n",
+        "tags": [
+          "Coder - Settings"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File short types retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "SUCCESS"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderFileShortTypesResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Classification in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "SUCCESS"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderFileShortTypesResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/filetypes/{itemId}": {
+      "put": {
+        "summary": "Update File Short Type",
+        "description": "Updates a file short type mapping.\nRequires settings write permission.\n",
+        "tags": [
+          "Coder - Settings"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "File short type item ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoderFileShortTypeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File short type updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "SUCCESS"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/settings/devices": {
+      "get": {
+        "summary": "Get Device Configurations",
+        "description": "Returns the device configurations for the organization.\nDevices are PVS devices that can be enabled/disabled for coder processing.\n",
+        "tags": [
+          "Coder - Settings"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Device configurations retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "activeDevices": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "description": "Unique device key identifier"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Display name of the device"
+                              },
+                              "category": {
+                                "type": "string",
+                                "description": "Device category"
+                              }
+                            }
+                          },
+                          "description": "List of active devices"
+                        },
+                        "dateChanged": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "userIdChanged": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "summary": "Enable Device",
+        "description": "Enables a device for coder processing.\nThe device is added to the active devices list. If a device with the same key\nalready exists, it will be replaced with the new device data.\n",
+        "tags": [
+          "Coder - Settings"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "key",
+                  "name",
+                  "category"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "Unique device key identifier"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Display name of the device"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "Device category"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Device enabled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "category": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Disable Device",
+        "description": "Disables a device for coder processing.\nThe device is removed from the active devices list based on its key.\n",
+        "tags": [
+          "Coder - Settings"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "key",
+                  "name",
+                  "category"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "Unique device key identifier to remove"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Display name of the device"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "Device category"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Device disabled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "category": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/settings/context": {
+      "get": {
+        "summary": "Get Practice Context Items",
+        "description": "Returns the practice context items for the organization.\nContext items are used as cheat sheet information for the coder AI.\n",
+        "tags": [
+          "Coder - Settings"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Context items retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "context": {
+                            "type": "string",
+                            "description": "Context text (max 500 characters)"
+                          },
+                          "referencedGops": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "GOP": {
+                                  "type": "string"
+                                },
+                                "GOType": {
+                                  "type": "string",
+                                  "enum": [
+                                    "EBM",
+                                    "GOAE"
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Practice Context Items",
+        "description": "Updates the practice context items for the organization.\nReplaces the entire context items array.\n",
+        "tags": [
+          "Coder - Settings"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "context"
+                  ],
+                  "properties": {
+                    "context": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "description": "Context text"
+                    },
+                    "referencedGops": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "GOP",
+                          "GOType"
+                        ],
+                        "properties": {
+                          "GOP": {
+                            "type": "string"
+                          },
+                          "GOType": {
+                            "type": "string",
+                            "enum": [
+                              "EBM",
+                              "GOAE"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Context items updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/flows": {
+      "get": {
+        "summary": "Get All Flows",
+        "description": "Returns a list of all configured analysis flows for the organization.\nFlows define the rules and analysis pipelines for patient data.\n",
+        "tags": [
+          "Coder - Flows"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flows retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CoderFlow"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create New Flow",
+        "description": "Creates a new analysis flow for the organization.\nRequires settings write permission.\n",
+        "tags": [
+          "Coder - Flows"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoderFlowInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Flow created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "string",
+                      "description": "ID of the created flow"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/flows/{flowId}": {
+      "get": {
+        "summary": "Get Single Flow",
+        "description": "Returns a single flow by ID with its full configuration.",
+        "tags": [
+          "Coder - Flows"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "flowId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Flow ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flow retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderFlow"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Flow not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Flow",
+        "description": "Updates an existing flow configuration.\nRequires settings write permission.\n",
+        "tags": [
+          "Coder - Flows"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "flowId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Flow ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoderFlowInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Flow updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderFlow"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Flow not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Flow",
+        "description": "Deletes a flow configuration.\nRequires settings write permission.\nNote: This may affect existing analysis objects linked to this flow.\n",
+        "tags": [
+          "Coder - Flows"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "flowId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Flow ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flow deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "deleted": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Flow not found"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/dashboard": {
+      "get": {
+        "summary": "Get Coder Dashboard Overview",
+        "description": "Returns an overview of all flows and their analysis results.\nIncludes counts of action handles per status (pending, approved, rejected)\nfor both total and recent time periods.\n",
+        "tags": [
+          "Coder - Dashboard"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "query",
+            "name": "recentDays",
+            "schema": {
+              "type": "integer",
+              "default": 7
+            },
+            "description": "Number of days to consider as \"recently\" for statistics"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderDashboardResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorMessage"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/list/analysis": {
+      "get": {
+        "summary": "Get Analysis-based Patient List",
+        "description": "Returns a list of patients with their analysis objects based on filter criteria.\nQueried from the analysis_objects collection - shows patients with analysis results.\n\n**Filtering options:**\n- Filter by flow ID\n- Filter by action handle status\n- Filter by date range\n- Filter by source rule ID\n\n**Sorting options:**\n- By number of pending action handles\n- By monetary value\n- By last update date\n",
+        "tags": [
+          "Coder - Dashboard"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "query",
+            "name": "flowId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by specific flow ID"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "deactivated",
+                "conflict",
+                "untouched"
+              ]
+            },
+            "description": "Filter by action handle status"
+          },
+          {
+            "in": "query",
+            "name": "sourceRuleId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by source rule ID (e.g., \"/Rule/GOPRule/EBM/01732\")"
+          },
+          {
+            "in": "query",
+            "name": "dateStart",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Start date for filtering (ISO 8601)"
+          },
+          {
+            "in": "query",
+            "name": "dateEnd",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "End date for filtering (ISO 8601)"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pendingCount",
+                "monetaryValue",
+                "dateUpdated"
+              ],
+              "default": "pendingCount"
+            },
+            "description": "Field to sort by"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            },
+            "description": "Sort order"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Maximum number of patients to return"
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Number of patients to skip (for pagination)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Patient list retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderAnalysisListResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorMessage"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/list/patients": {
+      "get": {
+        "summary": "Get Patient File List",
+        "description": "Returns a list of patient files sorted by modification date.\nQueried from the patient_file collection - shows all patients with data.\n\nUse this endpoint to get the most recently updated patient files.\n",
+        "tags": [
+          "Coder - Dashboard"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "dateChanged",
+                "dateCreated",
+                "lastDataReceived",
+                "lastContentModificationDate"
+              ],
+              "default": "dateChanged"
+            },
+            "description": "Field to sort by"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            },
+            "description": "Sort order"
+          },
+          {
+            "in": "query",
+            "name": "dateStart",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter by dateChanged >= dateStart (ISO 8601)"
+          },
+          {
+            "in": "query",
+            "name": "dateEnd",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter by dateChanged <= dateEnd (ISO 8601)"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Maximum number of patients to return"
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Number of patients to skip (for pagination)"
+          },
+          {
+            "in": "query",
+            "name": "searchTerm",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by patientNumberPVS (substring match). When set, flagIncludeAnalysisObjects is forced to false."
+          },
+          {
+            "in": "query",
+            "name": "flagIncludeAnalysisObjects",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "description": "Include analysis objects for each patient"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Patient file list retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderPatientFileListResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorMessage"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/patient/{patientNumber}": {
+      "get": {
+        "summary": "Get Patient File",
+        "description": "Returns the patient file metadata including tags, checksums, and update information.\nThis is the base information for a patient in the Coder module.\n",
+        "tags": [
+          "Coder - Patient"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Patient file retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderPatientFile"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthErrorMessage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Patient not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/patient/{patientNumber}/documentation": {
+      "get": {
+        "summary": "Get Patient Documentation",
+        "description": "Returns the documentation entries for a patient.\nCan be filtered by date range and documentation type.\nReturns daily documentation including GOPs, diagnoses, medications, forms, etc.\n",
+        "tags": [
+          "Coder - Patient"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          },
+          {
+            "in": "query",
+            "name": "dateStart",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Start date for documentation (ISO 8601)"
+          },
+          {
+            "in": "query",
+            "name": "dateEnd",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "End date for documentation (ISO 8601)"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "diag",
+                "anamnesis",
+                "procedure",
+                "therapy",
+                "medication",
+                "forms",
+                "lab",
+                "communication",
+                "admin",
+                "gop",
+                "other"
+              ]
+            },
+            "description": "Filter by documentation type"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 30
+            },
+            "description": "Maximum number of days to return"
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Number of days to skip (pagination)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documentation retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CoderPatientFileDay"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Patient not found"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/patient/{patientNumber}/analysisObjects": {
+      "get": {
+        "summary": "Get Analysis Objects for Patient",
+        "description": "Returns all analysis objects for a patient with paginated results.\nAnalysis objects contain summaries of action handles from flow runs.\n",
+        "tags": [
+          "Coder - Analysis"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          },
+          {
+            "in": "query",
+            "name": "flowId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by specific flow ID"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Maximum number of analysis objects to return"
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Number of analysis objects to skip"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "dateCreated",
+                "dateChanged"
+              ],
+              "default": "dateChanged"
+            },
+            "description": "Field to sort by"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analysis objects retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CoderAnalysisObject"
+                          }
+                        },
+                        "nextCursor": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Patient not found"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/patient/{patientNumber}/analysisObjects/{analysisObjectId}/actionHandles": {
+      "get": {
+        "summary": "Get Action Handles for Analysis Object",
+        "description": "Returns all action handles for a specific analysis object.\nAction handles represent individual findings that require user review.\n",
+        "tags": [
+          "Coder - Analysis"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          },
+          {
+            "in": "path",
+            "name": "analysisObjectId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Analysis object ID"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "deactivated",
+                "conflict",
+                "untouched"
+              ]
+            },
+            "description": "Filter by action handle status"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Maximum number of action handles to return"
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Number of action handles to skip"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Action handles retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CoderActionHandle"
+                          }
+                        },
+                        "nextCursor": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Analysis object not found"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/patient/{patientNumber}/analysisObjects/{analysisObjectId}/actionHandles/{actionHandleId}": {
+      "get": {
+        "summary": "Get Single Action Handle",
+        "description": "Returns a single action handle by ID.\nContains the full action handle data including payload and user edits.\n",
+        "tags": [
+          "Coder - Analysis"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          },
+          {
+            "in": "path",
+            "name": "analysisObjectId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Analysis object ID"
+          },
+          {
+            "in": "path",
+            "name": "actionHandleId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Action handle ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Action handle retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderActionHandle"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Action handle not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Action Handle",
+        "description": "Updates an action handle with user feedback.\nUsed to approve, reject, or add comments to findings.\n",
+        "tags": [
+          "Coder - Analysis"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          },
+          {
+            "in": "path",
+            "name": "analysisObjectId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Analysis object ID"
+          },
+          {
+            "in": "path",
+            "name": "actionHandleId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Action handle ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "approved",
+                      "rejected",
+                      "deactivated"
+                    ],
+                    "description": "New status for the action handle"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "description": "Optional comment from the user"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Action handle updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderActionHandle"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Action handle not found"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/patient/{patientNumber}/activity": {
+      "get": {
+        "summary": "Get Latest Activity for Patient",
+        "description": "Returns the most recent analysis objects for a patient.\nUse this endpoint to see the latest analysis activity.\n",
+        "tags": [
+          "Coder - Patient"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "dateCreated",
+                "dateChanged"
+              ],
+              "default": "dateCreated"
+            },
+            "description": "Field to sort by"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Maximum number of items to return"
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Number of items to skip (pagination)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Activity retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderActivityResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Patient not found"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/patient/{patientNumber}/analyze": {
+      "post": {
+        "summary": "Trigger Patient Analysis",
+        "description": "Triggers an analysis run for the specified patient.\nThe analysis is processed asynchronously via the message queue.\nUse the activity endpoint to monitor progress.\n",
+        "tags": [
+          "Coder - Analysis"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "flowId": {
+                    "type": "string",
+                    "description": "Optional specific flow ID to run. If not provided, all flows are executed."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Analysis triggered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderTriggerAnalysisResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Patient not found"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/patient/{patientNumber}/tags": {
+      "get": {
+        "summary": "Get Patient Tags",
+        "description": "Returns all tags for a patient.\nTags are extracted during analysis runs and contain patient-level information\nsuch as CAVE entries, chronic conditions, or other relevant markers.\n",
+        "tags": [
+          "Coder - Patient"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tags retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CoderPatientTag"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Patient not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Create or Update a Patient Tag",
+        "description": "Creates a new tag or updates an existing one on the patient file.\nA tag is uniquely identified by the `tag` field.\nIf a matching tag exists, its fields are updated. Otherwise a new tag is created.\n",
+        "tags": [
+          "Coder - Patient"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoderPatientTagInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tag created or updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "string",
+                          "enum": [
+                            "created",
+                            "updated"
+                          ]
+                        },
+                        "tag": {
+                          "$ref": "#/components/schemas/CoderPatientTag"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Patient not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft-Delete a Patient Tag",
+        "description": "Marks a tag as deleted by setting `deleted: true`.\nThe tag is identified by the `tag` field in the request body.\nOptionally a `deletionReason` can be provided.\n",
+        "tags": [
+          "Coder - Patient"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoderPatientTagDeleteInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tag deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "string",
+                          "example": "deleted"
+                        },
+                        "tag": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Tag not found"
+          }
+        }
+      }
     }
-  },
-  "tags": []
+  }
 }

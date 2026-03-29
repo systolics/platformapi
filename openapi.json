@@ -489,29 +489,28 @@
       },
       "CoderActionHandleSummary": {
         "type": "object",
-        "description": "Summary of an action handle embedded in an analysis object",
+        "description": "Summary of an action handle (used in analysis list overview)",
         "properties": {
-          "id": {
-            "type": "string"
+          "total": {
+            "type": "integer"
           },
-          "status": {
-            "$ref": "#/components/schemas/CoderActionHandleStatus"
+          "pending": {
+            "type": "integer"
           },
-          "dateUpdated": {
-            "type": "string",
-            "format": "date-time"
+          "approved": {
+            "type": "integer"
           },
-          "monetaryValue": {
-            "type": "number",
-            "nullable": true
+          "rejected": {
+            "type": "integer"
           }
         }
       },
       "CoderActionHandle": {
         "type": "object",
         "properties": {
-          "_id": {
-            "type": "string"
+          "ident": {
+            "type": "integer",
+            "description": "PG auto-increment primary key"
           },
           "orgId": {
             "type": "string"
@@ -519,18 +518,52 @@
           "patientNumber": {
             "type": "string"
           },
-          "analysisObjectId": {
-            "type": "string"
+          "analysisObjectIdent": {
+            "type": "integer",
+            "description": "FK to analysis_objects.ident"
+          },
+          "flowName": {
+            "type": "string",
+            "description": "Flow step name (identify, validate, custom_task)"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "warning",
+              "add",
+              "workflow",
+              "enriched"
+            ],
+            "description": "Action handle kind"
           },
           "status": {
             "$ref": "#/components/schemas/CoderActionHandleStatus"
           },
           "sourceRuleId": {
             "type": "string",
-            "description": "ID of the rule that generated this action handle"
+            "description": "Canonical rule ID, e.g. /Rule/GOPRule/EBM/01740"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Functional date (documentation day)"
           },
           "monetaryValue": {
             "type": "number",
+            "nullable": true
+          },
+          "doctorShortHand": {
+            "type": "string",
+            "nullable": true,
+            "description": "LANR of the treating doctor"
+          },
+          "locationId": {
+            "type": "string",
+            "nullable": true,
+            "description": "BSNR of the practice location"
+          },
+          "evaluationId": {
+            "type": "string",
             "nullable": true
           },
           "dateCreated": {
@@ -541,20 +574,32 @@
             "type": "string",
             "format": "date-time"
           },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Human-readable finding description (from data JSONB)"
+          },
+          "reasoning": {
+            "type": "string",
+            "nullable": true,
+            "description": "Why the finding was created (from data JSONB)"
+          },
           "userEdit": {
             "$ref": "#/components/schemas/CoderActionHandleUserEdit"
           },
-          "payload": {
+          "traces": {
             "type": "object",
-            "description": "Rule-specific payload data"
+            "nullable": true,
+            "description": "Condition evaluation trace tree (only if flagIncludeTraces=true)"
           }
         }
       },
       "CoderAnalysisObject": {
         "type": "object",
         "properties": {
-          "_id": {
-            "type": "string"
+          "ident": {
+            "type": "integer",
+            "description": "PG auto-increment primary key"
           },
           "orgId": {
             "type": "string"
@@ -565,20 +610,42 @@
           "flowId": {
             "type": "string"
           },
+          "objectType": {
+            "type": "string",
+            "description": "e.g. billing"
+          },
+          "goType": {
+            "type": "string",
+            "description": "EBM or GOAE"
+          },
+          "repDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quarter in QYYYY format (EBM only)"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Explicit range start (GOAE only)"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Explicit range end (GOAE only)"
+          },
+          "lastEvaluationId": {
+            "type": "string",
+            "nullable": true
+          },
           "dateCreated": {
             "type": "string",
             "format": "date-time"
           },
-          "dateChanged": {
+          "dateUpdated": {
             "type": "string",
             "format": "date-time"
-          },
-          "actionHandles": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CoderActionHandleSummary"
-            },
-            "description": "Summary list of action handles"
           }
         }
       },
@@ -711,8 +778,8 @@
       "CoderAnalysisListObjectSummary": {
         "type": "object",
         "properties": {
-          "_id": {
-            "type": "string"
+          "ident": {
+            "type": "integer"
           },
           "flowId": {
             "type": "string"
@@ -1013,6 +1080,91 @@
               "type": "string"
             },
             "description": "List of allowed documentation types"
+          }
+        }
+      },
+      "CoderList": {
+        "type": "object",
+        "properties": {
+          "ident": {
+            "type": "integer",
+            "description": "List primary key"
+          },
+          "name": {
+            "type": "string"
+          },
+          "lastchange": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CoderListDayAggregate": {
+        "type": "object",
+        "description": "Per-day statistics for a list",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total action handles on this day"
+          },
+          "pending": {
+            "type": "integer"
+          },
+          "approved": {
+            "type": "integer"
+          },
+          "rejected": {
+            "type": "integer"
+          },
+          "deactivated": {
+            "type": "integer"
+          },
+          "totalMonetaryValue": {
+            "type": "number"
+          }
+        }
+      },
+      "CoderListDayPatient": {
+        "type": "object",
+        "description": "A patient's action handles for a single day in a list",
+        "properties": {
+          "patientNumber": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total action handles for this patient on this day"
+          },
+          "pending": {
+            "type": "integer"
+          },
+          "totalMonetaryValue": {
+            "type": "number"
+          },
+          "actionHandles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderActionHandle"
+            }
+          }
+        }
+      },
+      "CoderListDayResponse": {
+        "type": "object",
+        "description": "Response for GET /lists/:listIdent/day — patients with action handles for a single day",
+        "properties": {
+          "patients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoderListDayPatient"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
           }
         }
       }
@@ -2891,6 +3043,354 @@
           },
           "404": {
             "description": "Flow not found"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/lists": {
+      "get": {
+        "summary": "Get all lists",
+        "description": "Returns all to-do / daylist definitions for the organization.",
+        "tags": [
+          "Coder - Lists"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lists retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CoderList"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new list",
+        "tags": [
+          "Coder - Lists"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderList"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/lists/{listIdent}": {
+      "get": {
+        "summary": "Get a single list",
+        "tags": [
+          "Coder - Lists"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "listIdent",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List retrieved"
+          },
+          "404": {
+            "description": "List not found"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/lists/{listIdent}/aggregates": {
+      "get": {
+        "summary": "Get per-day aggregated statistics for a list",
+        "description": "Returns one row per date within the given range, showing the total number\nof items, how many are pending / approved / rejected / deactivated, and\nthe sum of monetary values.\n\nExample response row:\n`{ \"date\": \"2025-05-02\", \"total\": 104, \"pending\": 89, \"approved\": 10, ... }`\n",
+        "tags": [
+          "Coder - Lists"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "listIdent",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dateStart",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Start date (ISO 8601)"
+          },
+          {
+            "in": "query",
+            "name": "dateEnd",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "End date (ISO 8601)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregates retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CoderListDayAggregate"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/lists/{listIdent}/day": {
+      "get": {
+        "summary": "Get entries for a single day",
+        "description": "Returns action handles grouped by patient for the specified agenda date.\nSupports filtering by doctor (LANR) and/or location (BSNR).\n",
+        "tags": [
+          "Coder - Lists"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "listIdent",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Agenda date (ISO 8601)"
+          },
+          {
+            "in": "query",
+            "name": "doctor",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by doctor LANR"
+          },
+          {
+            "in": "query",
+            "name": "location",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by location BSNR"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "total",
+                "monetaryValue",
+                "patientNumber"
+              ],
+              "default": "pending"
+            },
+            "description": "Field to sort patients by"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            },
+            "description": "Sort direction"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Max patients to return"
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Patients to skip (pagination)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Day entries retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderListDayResponse"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

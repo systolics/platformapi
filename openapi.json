@@ -128,10 +128,69 @@
           "approved",
           "rejected",
           "deactivated",
-          "conflict",
           "untouched"
         ],
-        "description": "Status of an action handle"
+        "description": "Status of an action handle. 'untouched' is legacy (treat like pending, read-only); writable via the feedback PUT are only approved / rejected / pending — 'deactivated' is bot-only."
+      },
+      "CoderActionHandleKind": {
+        "type": "string",
+        "enum": [
+          "add",
+          "remove",
+          "adjust",
+          "review"
+        ],
+        "description": "The four handle kinds: add = 'Ziffer übernehmen?' (proposed new billing item, payload in createdItem), remove = 'Bestandsposition streichen?' (targetEntryRef), adjust = 'Feld/Faktor ändern?' (enrichedFields), review = 'Bitte prüfen' (no payload). Rows with legacy kinds are hidden from all read paths."
+      },
+      "CoderActionHandleSeverity": {
+        "type": "string",
+        "enum": [
+          "info",
+          "warning",
+          "alert"
+        ],
+        "description": "Urgency of the finding behind the handle (FindingSeverity)."
+      },
+      "CoderCandidateOutcome": {
+        "type": "string",
+        "enum": [
+          "bill_drafted",
+          "re_confirmed",
+          "existing_kept",
+          "superseded",
+          "excluded_by_selection",
+          "implausible",
+          "non_compliant",
+          "blocked_by_gop",
+          "not_in_optimal_invoice",
+          "suppressed_by_reviewer",
+          "suppressed_by_condensate",
+          "mutually_excluded",
+          "no_occasion",
+          "not_dated"
+        ],
+        "description": "Final outcome of a candidate in one run. bill_drafted = newly added to the invoice DRAFT; re_confirmed = existing item held its ground; existing_kept = as-is existing line mirrored unchanged; superseded = existing item stepped back; excluded_by_selection = filtered before evaluation; non_compliant = failed a compliance gate; implausible = failed plausibleIf; blocked_by_gop = excluded by another GOP (see blockedBy); not_in_optimal_invoice = passed all gates but lost against order/caps; suppressed_by_reviewer = expert-review veto (reason in reviewSuppressionReason); suppressed_by_condensate = dropped by the LLM relevance filter; mutually_excluded = lost a reviewer-declared same-event exclusion; no_occasion = expert seed without documented occasion; not_dated = date-less candidate, never simulated. Legacy stored value 'billed' is normalized to bill_drafted."
+      },
+      "CoderCandidateOutcomeBucket": {
+        "type": "string",
+        "enum": [
+          "adopted",
+          "confirmed",
+          "suppressed",
+          "not_adopted"
+        ],
+        "description": "UI bucket derived from the outcome: bill_drafted → adopted; re_confirmed/existing_kept → confirmed; suppressed_by_reviewer/suppressed_by_condensate → suppressed; everything else → not_adopted."
+      },
+      "CoderDocumentationAssessment": {
+        "type": "string",
+        "enum": [
+          "SUPPORTED",
+          "PARTIALLY_SUPPORTED",
+          "NOT_SUPPORTED",
+          "UNCLEAR",
+          "CONTRADICTED"
+        ],
+        "description": "Reviewer's documentation assessment (stamped even when SUPPORTED)."
       },
       "CoderDayChecksum": {
         "type": "object",
@@ -143,84 +202,6 @@
           "dateInserted": {
             "type": "string",
             "format": "date-time"
-          }
-        }
-      },
-      "CoderPatientTag": {
-        "type": "object",
-        "properties": {
-          "tag": {
-            "type": "string",
-            "description": "Tag text/label"
-          },
-          "lastDate": {
-            "type": "string",
-            "format": "date"
-          },
-          "source": {
-            "type": "string",
-            "description": "Source of the tag extraction"
-          },
-          "deleted": {
-            "type": "boolean"
-          },
-          "deletionReason": {
-            "type": "string",
-            "nullable": true
-          },
-          "dateUpdated": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "CoderPatientTagInput": {
-        "type": "object",
-        "description": "Input schema for creating or updating a patient tag",
-        "required": [
-          "tag",
-          "lastDate",
-          "source"
-        ],
-        "properties": {
-          "tag": {
-            "type": "string",
-            "description": "Tag text/label"
-          },
-          "lastDate": {
-            "type": "string",
-            "format": "date",
-            "description": "Date (ISO 8601)"
-          },
-          "source": {
-            "type": "string",
-            "description": "Source of the tag extraction"
-          },
-          "deleted": {
-            "type": "boolean",
-            "default": false
-          },
-          "deletionReason": {
-            "type": "string",
-            "nullable": true
-          }
-        }
-      },
-      "CoderPatientTagDeleteInput": {
-        "type": "object",
-        "description": "Input schema for soft-deleting a patient tag",
-        "required": [
-          "tag"
-        ],
-        "properties": {
-          "tag": {
-            "type": "string",
-            "description": "Tag text/label"
-          },
-          "deletionReason": {
-            "type": "string",
-            "nullable": true,
-            "description": "Optional reason for deletion"
           }
         }
       },
@@ -264,12 +245,6 @@
                 "type": "string",
                 "format": "date-time"
               }
-            }
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CoderPatientTag"
             }
           }
         }
@@ -482,6 +457,11 @@
             "nullable": true,
             "description": "Free-text feedback. Recommended on any status (approved/rejected/etc.) to build up gold-data examples."
           },
+          "flagIsBot": {
+            "type": "boolean",
+            "default": false,
+            "description": "True for automated (bot) feedback — py-core bot edits carry it too."
+          },
           "dateCreated": {
             "type": "string",
             "format": "date-time"
@@ -511,22 +491,19 @@
       },
       "CoderActionHandle": {
         "type": "object",
-        "additionalProperties": true,
         "properties": {
           "ident": {
             "type": "integer",
             "description": "PG auto-increment primary key"
           },
-          "orgId": {
-            "type": "string"
-          },
           "patientNumber": {
-            "type": "string"
+            "type": "string",
+            "description": "Hashed patient identifier"
           },
           "patientNumberPVS": {
             "type": "string",
             "nullable": true,
-            "description": "Non-hashed practice-system patient number; only populated by methods that JOIN coder.patients (the patient-level action-handles endpoint does NOT)"
+            "description": "Non-hashed practice-system patient number; only populated by methods that JOIN coder.patients (worklist/day lists — the patient-level action-handles endpoint does NOT)"
           },
           "birthDate": {
             "type": "string",
@@ -536,55 +513,51 @@
           },
           "flowName": {
             "type": "string",
-            "description": "Flow step name (identify, validate, custom_task)"
+            "description": "Producing flow: 'identify' (add handles) or 'validate' (all others)"
           },
-          "type": {
+          "kind": {
+            "$ref": "#/components/schemas/CoderActionHandleKind"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/CoderActionHandleSeverity"
+          },
+          "category": {
             "type": "string",
-            "enum": [
-              "warning",
-              "add",
-              "workflow",
-              "enriched",
-              "suspect"
-            ],
-            "description": "Action handle kind (mapped from the `kind` DB column). 'suspect' = 'War das so?'-Rückfrage an die Praxis: die Frage + Evidenz liegt in meta.suspect, die Übernahme-Payload in createdItem; approve = 'ja, wurde erbracht', reject = 'nein' (wiederholtes Nein muted das Muster über den Feedback-Rückfluss)."
+            "nullable": true,
+            "description": "FindingType literal (e.g. DOCUMENTATION_SUPPORT_ISSUE, BILLABLE_OMISSION); legacy rows may carry a free label (e.g. 'Allgemein')"
+          },
+          "categoryLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "German display label for `category` (e.g. 'Dokumentationslücke', 'Fehlende Ziffer'); unknown categories pass through raw"
+          },
+          "gop": {
+            "type": "string",
+            "nullable": true,
+            "description": "Normalized GOP/EBM code the handle refers to; null for case-level ('nogop') handles"
           },
           "status": {
             "$ref": "#/components/schemas/CoderActionHandleStatus"
           },
-          "sourceRuleId": {
-            "type": "string",
-            "description": "Canonical rule ID, e.g. /Rule/GOPRule/EBM/01740"
-          },
           "date": {
             "type": "string",
             "format": "date",
+            "nullable": true,
             "description": "Functional date (medical/event/documentation day)"
           },
           "monetaryValue": {
             "type": "number",
             "nullable": true,
-            "description": "EUR value associated with the finding (e.g. GOP value for an EBM/GOAE add)"
+            "description": "EUR value associated with the finding (e.g. GOP value for an add)"
           },
-          "doctors": {
-            "type": "array",
-            "description": "Doctors associated with the finding (jsonb on the row).",
-            "items": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "locations": {
-            "type": "array",
-            "description": "Practice locations associated with the finding (jsonb on the row).",
-            "items": {
-              "type": "object",
-              "additionalProperties": true
-            }
+          "sourceRuleId": {
+            "type": "string",
+            "description": "OPAQUE per-patient twin-matching key — stable across runs for the same semantic finding. Do NOT parse or derive display data from it (new-path rows use a /Sem/… grammar, legacy rows may carry plain rule ids)."
           },
           "evaluationId": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "The run that CREATED the handle — may be older than analysisObject.lastEvaluationId"
           },
           "dateCreated": {
             "type": "string",
@@ -599,46 +572,179 @@
           "lastTouch": {
             "type": "string",
             "format": "date-time",
-            "description": "COALESCE(dateUpdated, dateCreated) — null-safe last-modification timestamp, used by ?updatedFrom/?updatedTo filters and sortBy=lastTouch"
+            "description": "COALESCE(dateUpdated, dateCreated) — null-safe last-modification timestamp, used by ?updatedFrom/?updatedTo filters, sortBy=lastTouch and as the list nextCursor"
           },
           "title": {
             "type": "string",
             "nullable": true,
-            "description": "Display title for the finding (mirrors data.title)"
+            "description": "Display title for the finding"
           },
           "description": {
             "type": "string",
             "nullable": true,
-            "description": "Human-readable finding description (from data JSONB)"
+            "description": "Human-readable finding description (carries the reviewer sentences verbatim)"
           },
           "reasoning": {
             "type": "string",
             "nullable": true,
-            "description": "Why the finding was created (from data JSONB)"
-          },
-          "meta": {
-            "type": "object",
-            "nullable": true,
-            "additionalProperties": true,
-            "description": "Rule-supplied metadata (from data JSONB). Typed material keys written by py-core: meta.suspect (Rückfrage: question, occasionConfidence, anchorDates, occasionEvidence, priorRate/priorLift/priorSource, gate — camelCase), meta.factor_review (§5-Faktor-Widget: applied_factor, standard_factor, threshold_factor, max_factor, proposed_factor, factor_state, justification_found/text, evidence_findings, recommendation — snake_case), meta.grounding / meta.divergence_material (QS-Prüfhinweise, snake_case), meta.pattern (patternKey-Provenienz für den Feedback-Rückfluss, camelCase)."
+            "description": "Why the finding was created"
           },
           "targetIds": {
             "type": "array",
-            "description": "UUIDs of the patient-file items the finding refers to (data JSONB). For an 'add' finding this typically contains the createdItem.id; for a 'warning' it points at existing items.",
+            "description": "UUIDs of the patient-file items the finding refers to. For an 'add' this typically contains the createdItem.id; for remove/adjust/review it points at existing items.",
             "items": {
               "type": "string",
               "format": "uuid"
             }
           },
-          "createdItem": {
+          "userEdit": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CoderActionHandleUserEdit"
+              }
+            ],
+            "nullable": true,
+            "description": "Latest feedback snapshot; null while the handle is pending/untouched"
+          },
+          "meta": {
             "type": "object",
             "nullable": true,
+            "description": "Reduced metadata — only the sanctioned keys below are exposed (undefined keys are omitted).",
+            "properties": {
+              "findingId": {
+                "type": "string",
+                "nullable": true,
+                "description": "Id of the finding the handle was materialized from (fnd_…)"
+              },
+              "findingType": {
+                "type": "string",
+                "nullable": true,
+                "description": "FindingType literal (mirrors category)"
+              },
+              "origin": {
+                "type": "string",
+                "nullable": true,
+                "description": "Producer: rule id, reviewer finding id (e.g. 'F4'), 'draft_composer', or a check label"
+              },
+              "proposed": {
+                "type": "object",
+                "nullable": true,
+                "description": "Proposed change for remove/adjust handles",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "REMOVE",
+                      "SET_FACTOR",
+                      "SET_QUANTITY",
+                      "SET_COMMENT"
+                    ]
+                  },
+                  "fromValue": {
+                    "nullable": true
+                  },
+                  "toValue": {
+                    "nullable": true
+                  },
+                  "title": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "candidateRefs": {
+                "type": "array",
+                "description": "Join path to the candidate-evaluation ledger — subject candidate first, then related. Resolve via GET …/evaluations/{evaluationId}/candidates/{candidateId}.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "candidateId": {
+                      "type": "string",
+                      "description": "Run-local candidate id (cand_…)"
+                    },
+                    "evaluationId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "factorReview": {
+                "type": "object",
+                "nullable": true,
+                "description": "§5-factor review material (camelCase)",
+                "properties": {
+                  "appliedFactor": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "standardFactor": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "thresholdFactor": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "maxFactor": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "proposedFactor": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "factorState": {
+                    "type": "string",
+                    "enum": [
+                      "above_max",
+                      "above_threshold",
+                      "below_standard",
+                      "at_standard",
+                      "no_check"
+                    ]
+                  },
+                  "justificationFound": {
+                    "type": "boolean",
+                    "nullable": true
+                  },
+                  "justificationText": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "evidenceFindings": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "recommendation": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "chartIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Custom-task chart evidence references"
+              },
+              "gopUnvalidated": {
+                "type": "boolean",
+                "description": "True when a catalog check failed for an LLM-named GOP"
+              }
+            }
+          },
+          "createdItem": {
+            "type": "object",
             "additionalProperties": true,
-            "description": "For 'add'-kind findings: the proposed billing item to be created (data JSONB). Shape is polymorphic across rule types — EBM/GOAE GOP items expose keys like GOP, GOType, GOPText, GOPLANR, GOPBstNumber, monetaryValue, documentationDate, doctorShortHand, locationShortHand, caseId, hzvContractId. Null/absent for non-add findings.",
+            "description": "add-kind only: the proposed billing item (GOPEntry, PVS-style keys — GOP, GOPText, GOPLANR, GOType, GOPBstNumber, monetaryValue, GOPFactor, GOPComment, flagInvoiced, documentationDate, doctorShortHand, locationShortHand, caseId, hzvContractId, …). Absent for other kinds.",
             "properties": {
               "id": {
                 "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "nullable": true
               },
               "type": {
                 "type": "string",
@@ -670,6 +776,17 @@
                 "type": "number",
                 "nullable": true
               },
+              "GOPFactor": {
+                "type": "number",
+                "nullable": true
+              },
+              "GOPComment": {
+                "type": "string",
+                "nullable": true
+              },
+              "flagInvoiced": {
+                "type": "boolean"
+              },
               "documentationDate": {
                 "type": "string",
                 "format": "date-time",
@@ -690,17 +807,41 @@
               "state": {
                 "type": "object",
                 "additionalProperties": true,
-                "description": "Per-rule state flags, e.g. { flagIdentified: true, '/Rule/<id>': {...} }"
+                "description": "Per-rule state flags, e.g. { flagIdentified: true, candidateId: 'cand_…' }"
               }
             }
           },
-          "userEdit": {
-            "$ref": "#/components/schemas/CoderActionHandleUserEdit"
+          "targetEntryRef": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "remove-kind only: reference to the existing billing entry the handle proposes to strike. Absent for other kinds."
+          },
+          "enrichedFields": {
+            "type": "array",
+            "description": "adjust-kind only: the proposed field changes. Absent for other kinds.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fieldName": {
+                  "type": "string"
+                },
+                "oldValue": {
+                  "nullable": true
+                },
+                "newValue": {
+                  "nullable": true
+                },
+                "source": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
           },
           "traces": {
             "type": "object",
             "nullable": true,
-            "description": "Condition evaluation trace tree (only if flagIncludeTraces=true; otherwise stripped by the `data - 'traces'` projection in the SQL)"
+            "description": "Condition evaluation trace tree — single-GET with flagIncludeTraces=true only; otherwise stripped by the `data - 'traces'` SQL projection"
           },
           "analysisObject": {
             "type": "object",
@@ -722,6 +863,16 @@
                 "type": "string",
                 "description": "EBM or GOAE"
               },
+              "title": {
+                "type": "string",
+                "nullable": true,
+                "description": "One-line case title"
+              },
+              "inboundTotalMonetaryValue": {
+                "type": "number",
+                "nullable": true,
+                "description": "Value of the invoice the practice actually entered (per GOType, excluding identified items)"
+              },
               "repDate": {
                 "type": "string",
                 "nullable": true,
@@ -741,7 +892,8 @@
               },
               "lastEvaluationId": {
                 "type": "string",
-                "nullable": true
+                "nullable": true,
+                "description": "Entry point for the candidate-evaluation ledger of the youngest completed run"
               },
               "dateCreated": {
                 "type": "string",
@@ -797,9 +949,20 @@
             "nullable": true,
             "description": "Explicit range end (GOAE only)"
           },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "description": "One-line case title"
+          },
+          "inboundTotalMonetaryValue": {
+            "type": "number",
+            "nullable": true,
+            "description": "Value of the invoice the practice actually entered (per GOType, excluding identified items)"
+          },
           "lastEvaluationId": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "description": "Id of the youngest completed run — entry point for the candidate-evaluation ledger ('latest')"
           },
           "dateCreated": {
             "type": "string",
@@ -810,6 +973,626 @@
             "format": "date-time"
           }
         }
+      },
+      "CoderCandidateEvaluationItem": {
+        "type": "object",
+        "description": "One row of the candidate-evaluation ledger (list shape): the outcome of one candidate (GOP × target date) in one run, with API-side German decoration. Columns only — the structured depth lives on the detail endpoint.",
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "description": "RUN-LOCAL candidate id (cand_…) — only meaningful together with evaluationId"
+          },
+          "evaluationId": {
+            "type": "string",
+            "description": "The run this evaluation belongs to"
+          },
+          "gop": {
+            "type": "string",
+            "nullable": true,
+            "description": "Normalized GOP/EBM code (subject of the evaluation)"
+          },
+          "goType": {
+            "type": "string",
+            "nullable": true,
+            "description": "EBM or GOAE"
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Target service day; null for not_dated candidates"
+          },
+          "referenceDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Logical 'today' of the run"
+          },
+          "label": {
+            "type": "string",
+            "nullable": true,
+            "description": "Short catalog text of the service"
+          },
+          "intent": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "OMISSION_CHECK",
+              "OPPORTUNITY_CHECK",
+              null
+            ],
+            "description": "Evaluation intent; null = validation of an already-billed GOP"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/CoderCandidateOutcome"
+          },
+          "outcomeBucket": {
+            "$ref": "#/components/schemas/CoderCandidateOutcomeBucket"
+          },
+          "outcomeLabel": {
+            "type": "string",
+            "description": "German short label for the outcome (e.g. 'Übernommen', 'Bestand bestätigt')"
+          },
+          "blockedBy": {
+            "type": "string",
+            "nullable": true,
+            "description": "The blocking GOP when outcome = blocked_by_gop"
+          },
+          "standaloneCompliant": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Standalone compliance at targetDate; null = never checked"
+          },
+          "reviewStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "REVIEWED",
+              "NOT_REVIEWED",
+              null
+            ],
+            "description": "null = review not applicable / not run"
+          },
+          "documentationAssessment": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CoderDocumentationAssessment"
+              }
+            ],
+            "nullable": true
+          },
+          "documentationAssessmentLabel": {
+            "type": "string",
+            "nullable": true,
+            "description": "German sentence fragment for the assessment (e.g. 'nur teilweise durch die Dokumentation gedeckt')"
+          },
+          "reviewSuppressed": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Suppressed by the reviewer (reason in reviewSuppressionReason on the detail)"
+          },
+          "keptExisting": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Existing-invoice line (true for re_confirmed / existing_kept)"
+          },
+          "superseded": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Existing line stepped back"
+          },
+          "originCategory": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "rules",
+              "probabilistic",
+              "semantic",
+              "actual_gops",
+              null
+            ],
+            "description": "Policy column of the candidate"
+          },
+          "originType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "gop_rule",
+              "patient_rule",
+              "custom_task",
+              "language_model",
+              "reviewer",
+              "coder_assistant",
+              null
+            ],
+            "description": "Concrete producer; null for probabilistic/actual_gops origins"
+          },
+          "explanation": {
+            "type": "string",
+            "nullable": true,
+            "description": "Pre-rendered German candidate explanation (≤ 1200 chars) — directly displayable"
+          }
+        }
+      },
+      "CoderCandidateEvaluationDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CoderCandidateEvaluationItem"
+          },
+          {
+            "type": "object",
+            "description": "Detail shape: all list fields plus the structured depth from the ledger's JSONB payload. Pipeline internals (signals, signalRef, plausibility, tokenUsage, emittedHandles, provenance, provenanceDetail) are stripped.",
+            "properties": {
+              "decision": {
+                "type": "object",
+                "nullable": true,
+                "description": "The complete CandidateDecision — findings, verbatim reviewer notes and the structured gate stack.",
+                "properties": {
+                  "candidateId": {
+                    "type": "string"
+                  },
+                  "gop": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date",
+                    "nullable": true
+                  },
+                  "outcome": {
+                    "type": "string"
+                  },
+                  "blockedBy": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "reviewStatus": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "documentationAssessment": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "reviewNotes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "VERBATIM reviewer sentences — identical to what handle descriptions embed (deliberately redundant, do not deduplicate)"
+                  },
+                  "findings": {
+                    "type": "array",
+                    "description": "ALL findings on this candidate (subject or related), incl. ledger-only ones. Enriched with a German typeLabel.",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "fnd_… finding id"
+                        },
+                        "type": {
+                          "type": "string",
+                          "description": "FindingType literal"
+                        },
+                        "typeLabel": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "German label for `type` (API-side enrichment)"
+                        },
+                        "severity": {
+                          "$ref": "#/components/schemas/CoderActionHandleSeverity"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "rule",
+                            "check",
+                            "reviewer",
+                            "composer",
+                            "task"
+                          ]
+                        },
+                        "origin": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "gop": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "goType": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "date": {
+                          "type": "string",
+                          "format": "date",
+                          "nullable": true
+                        },
+                        "title": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "text": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "The finding sentence"
+                        },
+                        "reasoning": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "detail": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "evidence": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Chart quotes"
+                        },
+                        "proposed": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "action": {
+                              "type": "string",
+                              "enum": [
+                                "REMOVE",
+                                "SET_FACTOR",
+                                "SET_QUANTITY",
+                                "SET_COMMENT"
+                              ]
+                            },
+                            "fromValue": {
+                              "nullable": true
+                            },
+                            "toValue": {
+                              "nullable": true
+                            },
+                            "title": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          }
+                        },
+                        "payload": {
+                          "nullable": true,
+                          "description": "Typed per finding type: GOPEntry (BILLABLE_OMISSION), factor assessment, or enriched-field list"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "nullable": true,
+                          "enum": [
+                            "confirmed",
+                            "refuted",
+                            "inconclusive",
+                            null
+                          ]
+                        },
+                        "resolutionNote": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "candidateId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "relatedGops": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "relatedCandidateIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "explanation": {
+                    "type": "object",
+                    "nullable": true,
+                    "description": "Structured gate stack (DecisionExplanation) — source of the explainability panel (gateLabel → section heading, verdicts[].requirement/observed → Soll/Ist).",
+                    "properties": {
+                      "ruleId": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "decision": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "validate",
+                          "identify",
+                          "bill",
+                          "simulate",
+                          null
+                        ]
+                      },
+                      "subject": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "e.g. 'GOP 7 am 28.05.2026'"
+                      },
+                      "result": {
+                        "type": "boolean",
+                        "nullable": true
+                      },
+                      "headline": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "note": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "guidance": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "steps": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "gate": {
+                              "type": "string",
+                              "description": "Collector fieldname, e.g. 'regulatoryCompliance'"
+                            },
+                            "gateField": {
+                              "type": "string",
+                              "description": "Rule JSON gate, e.g. 'compliantIf'"
+                            },
+                            "gateLabel": {
+                              "type": "string",
+                              "description": "German section heading, e.g. 'Ausschluss-/Compliance-Bedingungen'"
+                            },
+                            "result": {
+                              "type": "boolean",
+                              "nullable": true
+                            },
+                            "value": {
+                              "nullable": true
+                            },
+                            "summary": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "verdicts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "group",
+                                      "condition",
+                                      "interpretation",
+                                      "constant"
+                                    ]
+                                  },
+                                  "result": {
+                                    "type": "boolean",
+                                    "nullable": true
+                                  },
+                                  "title": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "requirement": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "Soll"
+                                  },
+                                  "observed": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "Ist"
+                                  },
+                                  "text": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "Rendered German one-liner"
+                                  },
+                                  "operator": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "@and/@or/@not for groups"
+                                  },
+                                  "template": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "e.g. 'patientage', 'gop', 'positivegops'"
+                                  },
+                                  "children": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object"
+                                    },
+                                    "description": "Recursive ConditionVerdict list"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "assumedBySource": {
+                    "type": "boolean",
+                    "nullable": true
+                  },
+                  "trustBasis": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "origins": {
+                "type": "array",
+                "description": "Origin evidence of the candidate",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "properties": {
+                    "originCategory": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "originType": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "sourceIdentifier": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Rule id / task / jobExecutionId"
+                    },
+                    "referenceDay": {
+                      "type": "string",
+                      "format": "date",
+                      "nullable": true
+                    },
+                    "evidence": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Chart quotes"
+                    },
+                    "reasoning": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "nullable": true,
+                      "description": "e.g. { evidenceKind: 'service_artifact'|'occasion', seedRefs: [] }"
+                    },
+                    "preQualified": {
+                      "type": "boolean",
+                      "nullable": true
+                    },
+                    "originKind": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "direct_search_term",
+                        "weak_search_term",
+                        "chapter_expansion",
+                        null
+                      ]
+                    },
+                    "sourceTerms": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "clusterId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "clusterTitle": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "score": {
+                      "type": "number",
+                      "nullable": true
+                    }
+                  }
+                }
+              },
+              "compliance": {
+                "type": "object",
+                "nullable": true,
+                "description": "Per-date isolated compliance: { '<ISO date>': { compliant, monetaryValue, summary, blockedBy[], blockedByGopRefs[], matchedRulesCount } }",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "compliant": {
+                      "type": "boolean"
+                    },
+                    "monetaryValue": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "summary": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "blockedBy": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "blockedByGopRefs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "matchedRulesCount": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              "factorReview": {
+                "type": "object",
+                "nullable": true,
+                "additionalProperties": true,
+                "description": "FactorReviewMaterial (camelCase) when a §5-factor case applied"
+              },
+              "reviewSuppressionReason": {
+                "type": "string",
+                "nullable": true,
+                "description": "Verbatim reviewer reason when reviewSuppressed = true — the only user-visible 'why' for a suppressed proposal"
+              },
+              "currentlyBilledDates": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "description": "Days the GOP is already billed on"
+              },
+              "entryAmount": {
+                "type": "number",
+                "nullable": true,
+                "description": "Committed entry amount (EUR)"
+              },
+              "entryFactor": {
+                "type": "number",
+                "nullable": true,
+                "description": "Committed entry factor"
+              },
+              "entryComment": {
+                "type": "string",
+                "nullable": true,
+                "description": "Committed entry comment"
+              }
+            }
+          }
+        ]
       },
       "CoderFlow": {
         "type": "object",
@@ -869,6 +1652,9 @@
             "type": "integer"
           },
           "untouched": {
+            "type": "integer"
+          },
+          "deactivated": {
             "type": "integer"
           }
         }
@@ -3330,6 +4116,263 @@
         }
       }
     },
+    "/optimizer/{orgId}/coder/patient/{patientNumber}/analysisObjects/{analysisObjectId}/evaluations/{evaluationId}/candidates": {
+      "get": {
+        "summary": "Get Candidate Evaluations for a Run",
+        "description": "Returns the candidate-evaluation ledger of one analysis run — one row\nper considered candidate (GOP × target date), including candidates\nthat did NOT make it into the invoice draft or merely re-confirm the\nexisting invoice. This is the compact \"Prüfprotokoll\" feed: columns\nonly, no structured depth (see the detail endpoint for that).\n\n`evaluationId` may be the literal `latest`, which resolves via\n`analysis_objects.last_evaluation_id` (the youngest completed run).\n\nEach row carries the raw `outcome` plus API-side German decoration:\n`outcomeLabel` (short display label), `outcomeBucket`\n(adopted | confirmed | suppressed | not_adopted, for the summary\nchips) and `documentationAssessmentLabel`. `explanation` is\npre-rendered German and directly displayable.\n\nResume runs can append a second row per candidate — duplicates are\ncollapsed server-side (highest row ident wins).\n",
+        "tags": [
+          "Coder - Analysis"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          },
+          {
+            "in": "path",
+            "name": "analysisObjectId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Analysis object ident"
+          },
+          {
+            "in": "path",
+            "name": "evaluationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Run/evaluation id, or the literal `latest` for the youngest completed run"
+          },
+          {
+            "in": "query",
+            "name": "outcome",
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/CoderCandidateOutcome"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoderCandidateOutcome"
+                  }
+                }
+              ]
+            },
+            "style": "form",
+            "explode": true,
+            "description": "Filter by outcome (single value, comma-separated, or repeated query param)"
+          },
+          {
+            "in": "query",
+            "name": "gop",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by exact (normalized) GOP code"
+          },
+          {
+            "in": "query",
+            "name": "documentationAssessment",
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/CoderDocumentationAssessment"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoderDocumentationAssessment"
+                  }
+                }
+              ]
+            },
+            "style": "form",
+            "explode": true,
+            "description": "Filter by documentation assessment (single value, comma-separated, or repeated query param)"
+          },
+          {
+            "in": "query",
+            "name": "targetDate",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter by exact target date (yyyy-mm-dd)"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Maximum number of candidates to return"
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Number of candidates to skip (pagination)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Candidate evaluations retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "evaluationId": {
+                          "type": "string",
+                          "description": "The resolved evaluation id (useful when `latest` was requested)"
+                        },
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CoderCandidateEvaluationItem"
+                          }
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Analysis object not found for this patient, or no completed evaluation yet"
+          }
+        }
+      }
+    },
+    "/optimizer/{orgId}/coder/patient/{patientNumber}/analysisObjects/{analysisObjectId}/evaluations/{evaluationId}/candidates/{candidateId}": {
+      "get": {
+        "summary": "Get a Single Candidate Evaluation (Detail)",
+        "description": "Returns the full evaluation of one candidate in one run: all list\nfields plus the structured depth from the ledger's JSONB payload —\nthe complete `decision` (findings enriched with a German `typeLabel`,\nverbatim reviewer notes, the structured gate-stack `explanation`),\norigin evidence, per-date compliance, factor review, the\nreview-suppression reason, currently billed dates and the committed\nentry pricing (`entryAmount` / `entryFactor` / `entryComment`).\n\nPipeline internals (signals, LLM metadata, provenance) are stripped.\n\n`candidateId` is RUN-LOCAL (`cand_…`) — it is only meaningful in\ncombination with the `evaluationId` (action handles reference it via\n`meta.candidateRefs[] = {candidateId, evaluationId}`). `evaluationId`\nmay be the literal `latest`.\n",
+        "tags": [
+          "Coder - Analysis"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Organization ID"
+          },
+          {
+            "in": "path",
+            "name": "patientNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Hashed patient identifier"
+          },
+          {
+            "in": "path",
+            "name": "analysisObjectId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Analysis object ident"
+          },
+          {
+            "in": "path",
+            "name": "evaluationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Run/evaluation id, or the literal `latest` for the youngest completed run"
+          },
+          {
+            "in": "path",
+            "name": "candidateId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Run-local candidate id (e.g. `cand_yokholh5`)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Candidate evaluation retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CoderCandidateEvaluationDetail"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Candidate evaluation not found (or analysis object / evaluation unknown)"
+          }
+        }
+      }
+    },
     "/optimizer/{orgId}/coder/flows": {
       "get": {
         "summary": "Get All Flows",
@@ -4365,7 +5408,7 @@
     "/optimizer/{orgId}/coder/list/analysis": {
       "get": {
         "summary": "Get Analysis-based Patient List",
-        "description": "Returns a list of patients with their analysis objects based on filter criteria.\nQueried from the analysis_objects collection - shows patients with analysis results.\n\n**Filtering options:**\n- Filter by flow ID\n- Filter by action handle status\n- Filter by date range\n- Filter by source rule ID\n\n**Sorting options:**\n- By number of pending action handles\n- By monetary value\n- By last update date\n",
+        "description": "Returns a list of patients with their analysis objects based on filter criteria.\nQueried from the analysis_objects collection - shows patients with analysis results.\n\n**Filtering options:**\n- Filter by flow ID\n- Filter by action handle status\n- Filter by date range\n\n**Sorting options:**\n- By number of pending action handles\n- By monetary value\n- By last update date\n",
         "tags": [
           "Coder - Dashboard"
         ],
@@ -4402,19 +5445,10 @@
                 "approved",
                 "rejected",
                 "deactivated",
-                "conflict",
                 "untouched"
               ]
             },
             "description": "Filter by action handle status"
-          },
-          {
-            "in": "query",
-            "name": "sourceRuleId",
-            "schema": {
-              "type": "string"
-            },
-            "description": "Filter by source rule ID (e.g., \"/Rule/GOPRule/EBM/01732\")"
           },
           {
             "in": "query",
@@ -5031,7 +6065,6 @@
                 "approved",
                 "rejected",
                 "deactivated",
-                "conflict",
                 "untouched"
               ]
             },
@@ -5143,7 +6176,6 @@
                     "approved",
                     "rejected",
                     "deactivated",
-                    "conflict",
                     "untouched"
                   ]
                 },
@@ -5165,7 +6197,13 @@
             "schema": {
               "oneOf": [
                 {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "add",
+                    "remove",
+                    "adjust",
+                    "review"
+                  ]
                 },
                 {
                   "type": "array",
@@ -5177,7 +6215,32 @@
             },
             "style": "form",
             "explode": true,
-            "description": "Filter by action handle kind (single value or repeated query param)"
+            "description": "Filter by action handle kind (single value, comma-separated, or repeated query param)"
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "schema": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "info",
+                    "warning",
+                    "alert"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "style": "form",
+            "explode": true,
+            "description": "Filter by action handle severity (single value, comma-separated, or repeated query param)"
           },
           {
             "in": "query",
@@ -5291,7 +6354,7 @@
             }
           },
           "400": {
-            "description": "Invalid query parameter. Returned when:\n- `status` contains a value not in [pending, approved, rejected, deactivated, conflict, untouched]\n- `sortBy` is not one of [dateCreated, dateUpdated, lastTouch]\n- `listIdent` is not parseable as an integer\n- `dateQuery.field` (internal) is not one of [date, dateCreated, dateUpdated, lastTouch]\n",
+            "description": "Invalid query parameter. Returned when:\n- `status` contains a value not in [pending, approved, rejected, deactivated, untouched]\n- `sortBy` is not one of [dateCreated, dateUpdated, lastTouch]\n- `listIdent` is not parseable as an integer\n- `dateQuery.field` (internal) is not one of [date, dateCreated, dateUpdated, lastTouch]\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -5452,12 +6515,11 @@
                   "status": {
                     "type": "string",
                     "enum": [
-                      "pending",
                       "approved",
                       "rejected",
-                      "deactivated"
+                      "pending"
                     ],
-                    "description": "New status for the action handle"
+                    "description": "New status for the action handle (writable subset)"
                   },
                   "comment": {
                     "type": "string",
@@ -5554,14 +6616,11 @@
                   "newStatus": {
                     "type": "string",
                     "enum": [
-                      "pending",
                       "approved",
                       "rejected",
-                      "deactivated",
-                      "conflict",
-                      "untouched"
+                      "pending"
                     ],
-                    "description": "Target status. `status` is also accepted as an alias."
+                    "description": "Target status. `status` is also accepted as an alias. Only\napproved / rejected / pending are writable — 'deactivated'\nis bot-only, 'untouched' is legacy read-only; anything else\nreturns 400.\n"
                   },
                   "oldStatus": {
                     "type": "string",
@@ -5570,7 +6629,6 @@
                       "approved",
                       "rejected",
                       "deactivated",
-                      "conflict",
                       "untouched"
                     ],
                     "description": "Optimistic-UI hint; validated but not enforced as compare-and-swap."
@@ -5578,6 +6636,11 @@
                   "comment": {
                     "type": "string",
                     "description": "Optional free-text feedback. Typically prefilled from a UI preset and\nthen edited by the user. Recommended on every status (not just\nrejection) for gold-data accumulation.\n"
+                  },
+                  "flagIsBot": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Marks automated (bot) feedback; persisted into data.userEdit."
                   }
                 }
               }
@@ -5606,7 +6669,7 @@
                         "actionHandleId": {
                           "type": "string"
                         },
-                        "analysisObjectId": {
+                        "analysisObjectIdent": {
                           "type": "string",
                           "nullable": true
                         }
@@ -5797,235 +6860,6 @@
           },
           "404": {
             "description": "Patient not found"
-          }
-        }
-      }
-    },
-    "/optimizer/{orgId}/coder/patient/{patientNumber}/tags": {
-      "get": {
-        "summary": "Get Patient Tags",
-        "description": "Returns all tags for a patient.\nTags are extracted during analysis runs and contain patient-level information\nsuch as CAVE entries, chronic conditions, or other relevant markers.\n",
-        "tags": [
-          "Coder - Patient"
-        ],
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "orgId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Organization ID"
-          },
-          {
-            "in": "path",
-            "name": "patientNumber",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Hashed patient identifier"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Tags retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/CoderPatientTag"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Patient not found"
-          }
-        }
-      },
-      "put": {
-        "summary": "Create or Update a Patient Tag",
-        "description": "Creates a new tag or updates an existing one on the patient file.\nA tag is uniquely identified by the `tag` field.\nIf a matching tag exists, its fields are updated. Otherwise a new tag is created.\n",
-        "tags": [
-          "Coder - Patient"
-        ],
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "orgId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Organization ID"
-          },
-          {
-            "in": "path",
-            "name": "patientNumber",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Hashed patient identifier"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CoderPatientTagInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Tag created or updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "action": {
-                          "type": "string",
-                          "enum": [
-                            "created",
-                            "updated"
-                          ]
-                        },
-                        "tag": {
-                          "$ref": "#/components/schemas/CoderPatientTag"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request body"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Patient not found"
-          }
-        }
-      },
-      "delete": {
-        "summary": "Soft-Delete a Patient Tag",
-        "description": "Marks a tag as deleted by setting `deleted: true`.\nThe tag is identified by the `tag` field in the request body.\nOptionally a `deletionReason` can be provided.\n",
-        "tags": [
-          "Coder - Patient"
-        ],
-        "security": [
-          {
-            "accessToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "orgId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Organization ID"
-          },
-          {
-            "in": "path",
-            "name": "patientNumber",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Hashed patient identifier"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CoderPatientTagDeleteInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Tag deleted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "action": {
-                          "type": "string",
-                          "example": "deleted"
-                        },
-                        "tag": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request body"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Tag not found"
           }
         }
       }

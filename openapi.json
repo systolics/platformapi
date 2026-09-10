@@ -5704,6 +5704,82 @@
         }
       }
     },
+    "/v01/optimizer/{orgId}/coder/maintenance/schema-sync": {
+      "post": {
+        "summary": "Trigger a coder PG schema sync for this org (admin/orgowner only)",
+        "description": "Publishes `{ orgId }` to the `executecoderschemasync` queue so the\nExecuteCoderSchemaSync function re-runs CoderRepository.ensure_and_sync()\nagainst the org's coder schema. Hidden maintenance action — reached via\nthe Ctrl+right-click menu on the \"Coder Konfiguration\" header.\n",
+        "tags": [
+          "Coder - Settings"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "{ key, data: { queueName, orgId } } — the sync runs asynchronously"
+          }
+        }
+      }
+    },
+    "/v01/optimizer/{orgId}/coder/maintenance/patient-file-sync": {
+      "post": {
+        "summary": "Rebuild the PostgreSQL patient-file projection from MongoDB (admin/orgowner only)",
+        "description": "Publishes ONE orchestration message to `codersyncpatientfiledataorchestration`.\nThe CoderPatientFileSyncOrchestration function fans out one\n`codersyncpatientfiledata` message per matching patient; the Python worker\nCoderSyncPatientFileData rebuilds `coder.patient_file_days` and\n`coder.patient_file_day_entries` for that patient from MongoDB.\n\nSelection (both optional, combinable): `sinceDays` — only patients whose\ndocumentation content changed in the last N days; `patientNumbers` — explicit\nlist. Neither → every patient of the org. `dryRun: true` only returns the\nnumber of matching patients and publishes nothing. `options.force` is passed\nthrough to the worker.\n",
+        "tags": [
+          "Coder - Settings"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sinceDays": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "patientNumbers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "options": {
+                    "type": "object",
+                    "properties": {
+                      "force": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "dryRun": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "dryRun — { key, data: { dryRun: true, matched } }"
+          },
+          "202": {
+            "description": "{ key, data: { queueName, jobId, orgId, sinceDays, patientNumbers, options, matched } } — the rebuild runs asynchronously"
+          },
+          "400": {
+            "description": "Invalid request body"
+          }
+        }
+      }
+    },
     "/optimizer/{orgId}/coder/patient/{patientNumber}": {
       "get": {
         "summary": "Get Patient File",
@@ -6895,9 +6971,7 @@
               "enum": [
                 "dateStarted",
                 "dateCompleted",
-                "patientNumber",
-                "status",
-                "durationMs"
+                "status"
               ],
               "default": "dateStarted"
             }
@@ -6953,7 +7027,7 @@
         ],
         "responses": {
           "200": {
-            "description": "{ key, data: { runs, hasMore, totalCount } } — heavy fields (liveEvents, configSnapshot) excluded"
+            "description": "{ key, data: { runs, hasMore, totalCount } } — runs contain only the whitelisted fields (evaluationId, status, isError, patientNumber, flowId, analysisObjectIdent, dateStarted, dateCompleted, durationMs)"
           }
         }
       }
@@ -6966,7 +7040,7 @@
         ],
         "responses": {
           "200": {
-            "description": "{ key, data: run } — the liveEvents array is the replay snapshot for the run detail page"
+            "description": "{ key, data: run } — whitelisted list fields plus errorMessage and liveEvents (the replay snapshot for the run detail page)"
           },
           "404": {
             "description": "Run not found"

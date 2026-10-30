@@ -9641,12 +9641,21 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "keyType": {
+                    "type": "string",
+                    "enum": [
+                      "partner",
+                      "integration"
+                    ],
+                    "default": "partner",
+                    "description": "partner: key with scopes for this API (prefix bp-); integration: key of a service manager for the partner API only (prefix bps-), without scopes. Integration keys require a service manager; a service manager creates partner keys only if it is a holding partner too."
+                  },
                   "scopes": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "List of scopes assigned to the API key.",
+                    "description": "List of scopes assigned to a partner key. Must be empty for an integration key.",
                     "example": [
                       "data-dwh-data-read",
                       "partner-owner"

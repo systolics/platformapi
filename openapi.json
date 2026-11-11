@@ -98,6 +98,49 @@
             "type": "string",
             "description": "Error message",
             "example": "An error occurred."
+          },
+          "details": {
+            "type": "array",
+            "description": "Field-level details of a validation error (e.g. 406 MISSING_ORG, 400 INVALID_MASTER_DATA, 400 INVALID_LEAD). One entry per field, at most 50; messages never contain submitted values. Absent for all other errors.",
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "code",
+                "message"
+              ],
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Path of the field in the request body",
+                  "example": [
+                    "organization",
+                    "zip"
+                  ]
+                },
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "required",
+                    "pattern",
+                    "minLength",
+                    "maxLength",
+                    "options",
+                    "immutable",
+                    "unknown"
+                  ],
+                  "example": "pattern"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Human-readable message (German)",
+                  "example": "Bitte eine gültige Postleitzahl eintragen."
+                }
+              }
+            }
           }
         }
       },
@@ -9580,6 +9623,225 @@
         }
       }
     },
+    "/auth/register": {
+      "post": {
+        "summary": "Register a practice with its owner (public signup)",
+        "description": "Creates the organization and its owner user from the public signup. Access is granted by a partner link (`partner`: pc/pu/lid) or a beta key. Organization and person are validated with the master-data rules of the organization's country (DE, AT, CH, ES, IT, GR): postal-code format, house number (optional for ES/IT/GR), BSNR and KV (DE only), LANR (DE only). Violations answer 406 with `details`; submitted values are never echoed.",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "name",
+                  "surname",
+                  "password",
+                  "organization"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "example": "Dr."
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Test"
+                  },
+                  "surname": {
+                    "type": "string",
+                    "example": "Muster"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "doc@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Must comply with the strong-password rules",
+                    "example": "SecurePassword123!"
+                  },
+                  "LANR": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Germany (DE) only, 9 digits; ignored for other countries",
+                    "example": ""
+                  },
+                  "organization": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "street",
+                      "zip",
+                      "city",
+                      "countryCode"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "example": "Clínica Dental Sol"
+                      },
+                      "bstNumber": {
+                        "type": "string",
+                        "description": "DE only, 9 digits",
+                        "example": "123456789"
+                      },
+                      "kvCode": {
+                        "type": "number",
+                        "description": "DE only, one of the 17 KV codes",
+                        "example": 46
+                      },
+                      "street": {
+                        "type": "string",
+                        "example": "Calle Mayor"
+                      },
+                      "number": {
+                        "type": "string",
+                        "description": "Required for DE/AT/CH, optional for ES/IT/GR",
+                        "example": ""
+                      },
+                      "zip": {
+                        "type": "string",
+                        "description": "Format of the country",
+                        "example": "28013"
+                      },
+                      "city": {
+                        "type": "string",
+                        "example": "Madrid"
+                      },
+                      "countryCode": {
+                        "type": "string",
+                        "enum": [
+                          "DE",
+                          "AT",
+                          "CH",
+                          "ES",
+                          "IT",
+                          "GR"
+                        ],
+                        "example": "ES"
+                      }
+                    }
+                  },
+                  "rebates": {
+                    "type": "object",
+                    "properties": {
+                      "legalNoticePartner": {
+                        "type": "boolean"
+                      },
+                      "rebates": {
+                        "type": "array",
+                        "items": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  },
+                  "partner": {
+                    "type": "object",
+                    "description": "Registration link parameters (partner code, partner user id, optional lead id)",
+                    "properties": {
+                      "pc": {
+                        "type": "string"
+                      },
+                      "pu": {
+                        "type": "string"
+                      },
+                      "lid": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "betaKey": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registered; `data` carries organization, orgOwnerUser and the pipeline flags (partner connection, infrastructure, validation mail)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string",
+                      "example": "SUCCESS"
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": ""
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "organization": {
+                          "type": "object",
+                          "properties": {
+                            "orgId": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "orgOwnerUser": {
+                          "type": "object",
+                          "properties": {
+                            "userId": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "pipeline": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "MISSING_ORG / BAD_USER_FORMAT with `details`, INADEQUATE_USER, INADEQUATE_PASSPHRASE, INVALID_PARTNER_DETAILS, INVALID_BETA_KEY, INVALID_REGISTRATION_KEY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "USER_EXISTS - a user with this email or LANR exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/bp/{orgId}/apikey": {
       "get": {
         "summary": "List the existing API Keys for a business partner organization",
@@ -10082,10 +10344,10 @@
         }
       }
     },
-    "/bp/{orgId}/instances/new": {
+    "/bp/{orgId}/instance/new": {
       "post": {
         "summary": "Create a new practice instance (unattended onboarding)",
-        "description": "Creates a new practice instance (organization) via unattended onboarding. This endpoint is designed for automated instance creation by business partners using API keys with the 'unattended-onboarding' scope. The endpoint will create a new organization, set up the organization owner user, and optionally create an admin user. Infrastructure setup and account validation emails are sent automatically. This endpoint requires (a) dedicated contractual agreement with systolics and  (b) a dedicated API key with the 'unattended-onboarding' scope. Further configuration (e.g. customization of registration flows) are  possible, but require specific configuration. Please contact your account manager for more information.",
+        "description": "Creates a new practice instance (organization) via unattended onboarding. This endpoint is designed for automated instance creation by business partners using API keys with the 'unattended-onboarding' scope. The endpoint will create the organization and its owner/admin user, validated with the master-data rules of the organization's country (DE, AT, CH, ES, IT, GR): postal-code format, house number (optional for ES/IT/GR), BSNR and KV (DE only), LANR (DE only). Violations answer 406 with `details` (see ErrorResponse); submitted values are never echoed. a new organization, set up the organization owner user, and optionally create an admin user. Infrastructure setup and account validation emails are sent automatically. This endpoint requires (a) dedicated contractual agreement with systolics and  (b) a dedicated API key with the 'unattended-onboarding' scope. Further configuration (e.g. customization of registration flows) are  possible, but require specific configuration. Please contact your account manager for more information.",
         "tags": [
           "Partner - Onboarding"
         ],
@@ -10165,10 +10427,10 @@
                     "example": "SecurePassword123!"
                   },
                   "LANR": {
-                    "type": "number",
+                    "type": "string",
                     "nullable": true,
-                    "description": "Optional LANR (Lebenslange Arztnummer) for medical professionals, leave empty if not applicable.",
-                    "example": null
+                    "description": "Optional LANR (Lebenslange Arztnummer) of the user, Germany (DE) only - 9 digits, an 8-digit value is padded with a leading zero. Ignored for practices in other countries.",
+                    "example": "123456789"
                   },
                   "title": {
                     "type": "string",
@@ -10183,12 +10445,11 @@
                   },
                   "organization": {
                     "type": "object",
+                    "description": "Master data of the practice. Required fields depend on the country - bstNumber and kvCode for DE, the house number for DE/AT/CH; the postal code must match the country's format (DE/ES/IT 5 digits, AT/CH 4 digits, GR \"NNN NN\").",
                     "required": [
                       "name",
                       "street",
-                      "number",
                       "zip",
-                      "kvCode",
                       "city",
                       "countryCode"
                     ],
@@ -10199,9 +10460,9 @@
                         "example": "Medical Clinic ABC"
                       },
                       "bstNumber": {
-                        "type": "number",
-                        "description": "BST number (Betriebsstättennummer). It is required for Germany (DE), place a 0 for private only clinics.",
-                        "example": 123456789
+                        "type": "string",
+                        "description": "BSNR (Betriebsstättennummer), Germany (DE) only and required there - 9 digits, \"000000000\" (or 0) for private-only practices, 8-digit values are padded. Ignored for other countries.",
+                        "example": "123456789"
                       },
                       "street": {
                         "type": "string",
@@ -10210,18 +10471,18 @@
                       },
                       "number": {
                         "type": "string",
-                        "description": "House number",
-                        "example": 42
+                        "description": "House number - required for DE, AT and CH; optional for ES, IT and GR (may be empty, e.g. s/n or SNC addresses).",
+                        "example": "42"
                       },
                       "zip": {
                         "type": "string",
-                        "description": "Postal code",
-                        "example": 10115
+                        "description": "Postal code in the format of the country (DE/ES/IT 5 digits, AT/CH 4 digits, GR \"NNN NN\" - \"15124\" is stored as \"151 24\").",
+                        "example": "10115"
                       },
                       "kvCode": {
                         "type": "number",
-                        "description": "KV code (Kassenärztliche Vereinigung). Please refer to the KV-Schlüsseltabellen for the correct KV code for your organization.",
-                        "example": 100
+                        "description": "KV code (Kassenärztliche Vereinigung), Germany (DE) only and required there - one of 1, 2, 3, 17, 20, 38, 46, 51, 52, 71, 72, 73, 78, 83, 88, 93, 98. Ignored for other countries.",
+                        "example": 46
                       },
                       "city": {
                         "type": "string",
@@ -10233,9 +10494,12 @@
                         "enum": [
                           "DE",
                           "AT",
-                          "CH"
+                          "CH",
+                          "ES",
+                          "IT",
+                          "GR"
                         ],
-                        "description": "Country code (ISO 3166-1 alpha-2)",
+                        "description": "Country code (ISO 3166-1 alpha-2; Greece is GR). Decides which rules apply to the organization and the LANR.",
                         "example": "DE"
                       }
                     }
@@ -10443,7 +10707,7 @@
             }
           },
           "406": {
-            "description": "Not acceptable - Invalid user or organization data. This can occur if the email is invalid, password is not strong enough, or organization data does not meet requirements.",
+            "description": "Not acceptable - Invalid user or organization data: MISSING_ORG (organization data does not meet the rules of its country, or the country is missing/unsupported; `details` lists the fields as ['organization', <field>]), BAD_USER_FORMAT (invalid user fields, e.g. the LANR, `details` as [<field>]), INADEQUATE_USER (email), INADEQUATE_PASSPHRASE (password strength). Nothing is created in these cases.",
             "content": {
               "application/json": {
                 "schema": {

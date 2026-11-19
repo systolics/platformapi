@@ -9273,6 +9273,529 @@
         }
       }
     },
+    "/admin/analytics/dashboard-appeals": {
+      "get": {
+        "summary": "List requested or claimed dashboard review appeals",
+        "description": "Global admin role required. Cursor, limit, status and owner filters.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            }
+          },
+          {
+            "in": "query",
+            "name": "appealStatus",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "requested",
+                "inReview"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "orgType",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "org",
+                "bpOrg"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "orgId",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of open appeals across tenants."
+          }
+        }
+      }
+    },
+    "/admin/analytics/dashboard-appeals/{orgType}/{orgId}/{dashboardId}/{versionId}": {
+      "get": {
+        "summary": "Appeal case detail",
+        "description": "Version, appeal state, relevant findings and history references for one target version.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgType",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "org",
+                "bpOrg"
+              ]
+            }
+          },
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Appeal case with findings and history references."
+          },
+          "404": {
+            "description": "Target not found for the given identity."
+          }
+        }
+      }
+    },
+    "/admin/analytics/dashboard-appeals/{orgType}/{orgId}/{dashboardId}/{versionId}/source/{fileName}": {
+      "get": {
+        "summary": "Safe source view of an inventory file of the appeal case",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgType",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "org",
+                "bpOrg"
+              ]
+            }
+          },
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fileName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original source bytes as text view or download."
+          },
+          "404": {
+            "description": "File not part of the version inventory, or its quarantine copy is missing."
+          }
+        }
+      }
+    },
+    "/admin/analytics/dashboard-appeals/{orgType}/{orgId}/{dashboardId}/{versionId}/review-events": {
+      "get": {
+        "summary": "Review event summaries of the appeal case",
+        "description": "The same business projections as on the customer paths, with administrative authorization.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgType",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "org",
+                "bpOrg"
+              ]
+            }
+          },
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event summaries with cursor."
+          }
+        }
+      }
+    },
+    "/admin/analytics/dashboard-appeals/{orgType}/{orgId}/{dashboardId}/{versionId}/review-events/{eventId}": {
+      "get": {
+        "summary": "One complete review event of the appeal case",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgType",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "org",
+                "bpOrg"
+              ]
+            }
+          },
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The complete event document."
+          }
+        }
+      }
+    },
+    "/admin/analytics/dashboard-appeals/{orgType}/{orgId}/{dashboardId}/{versionId}/claim": {
+      "post": {
+        "summary": "Claim or reassign an open appeal",
+        "description": "Moves the appeal to inReview and records the assignee. A takeover\nfrom another admin requires a reason. Claiming prevents concurrent\nconflicting decisions; only the assigned person may decide.\n",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgType",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "org",
+                "bpOrg"
+              ]
+            }
+          },
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision",
+                  "reqEventId"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer"
+                  },
+                  "reqEventId": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "appeal.status=inReview with assignee and revision."
+          }
+        }
+      }
+    },
+    "/admin/analytics/dashboard-appeals/{orgType}/{orgId}/{dashboardId}/{versionId}/decision": {
+      "post": {
+        "summary": "Accept or decline an open appeal",
+        "description": "For accept, findingResolutions contains specific entries for all\neligible findings of the referenced appeal; incomplete final\ndecisions are rejected and leave the case in review. For decline,\nthe array stays empty. Only overridable findings may be resolved.\n",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgType",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "org",
+                "bpOrg"
+              ]
+            }
+          },
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision",
+                  "reqEventId",
+                  "decision",
+                  "reason"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer"
+                  },
+                  "reqEventId": {
+                    "type": "string"
+                  },
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "accept",
+                      "decline"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "findingResolutions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "findingId": {
+                          "type": "string"
+                        },
+                        "resolution": {
+                          "type": "string",
+                          "enum": [
+                            "falsePositive",
+                            "riskAccepted"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "accepted or declined, recalculated effective decision and revision."
+          }
+        }
+      }
+    },
     "/bp/{orgId}/analytics/dashboards/{dashboardId}": {
       "get": {
         "summary": "Get one dynamic dashboard for a business partner org (active version only)",
@@ -9363,6 +9886,1119 @@
           },
           "404": {
             "description": "Dashboard not found, not visible to this BP org, without active version, or unknown file."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards": {
+      "get": {
+        "summary": "Management overview of the owner's custom dashboards",
+        "description": "Cursor-paginated list of the owner's own custom dashboards with the\nactive version and the compact process information of the latest\nsubmission. Optional status filters apply to the latest submission.\n",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            }
+          },
+          {
+            "in": "query",
+            "name": "reviewStatus",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running",
+                "completed",
+                "failed",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "reviewDecision",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "customerAcceptanceRequired",
+                "rejected",
+                "securityReviewRequired"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "artifactStatus",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "quarantined",
+                "promoting",
+                "ready",
+                "promotionFailed"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated management overview."
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a custom dashboard without any version yet",
+        "description": "Creates the dashboard record for the authenticated owner. A new\ndashboard starts with zero versions and flagAutoPublish=false.\nSupports the Idempotency-Key header: the same key with the same\nrequest returns the original result, a different request is a 409.\n",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Dashboard and revision; initially no version."
+          },
+          "400": {
+            "description": "Schema validation failed."
+          },
+          "409": {
+            "description": "Conflicting idempotency key."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/manage": {
+      "get": {
+        "summary": "Management data of one dashboard",
+        "description": "Settings, revision and a compact version projection (without\ncomplete findings) of every version, newest submission first.\nThe projection includes `dataRequirements` when declared.\n",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Management data, settings, revision and compact version projection."
+          },
+          "404": {
+            "description": "Dashboard not visible in the authorized owner context."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}": {
+      "patch": {
+        "summary": "Update descriptive metadata and settings of a dashboard",
+        "description": "Human-initiated change; sends the expectedRevision, an outdated state\nresults in 409. Unknown or protected write fields are rejected.\nEnabling flagAutoPublish applies only to future approvals and never\nretro-activates an already approved version.\n",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "settings": {
+                    "type": "object",
+                    "properties": {
+                      "flagAutoPublish": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated metadata and revision; no retroactive activation."
+          },
+          "400": {
+            "description": "Schema validation failed."
+          },
+          "404": {
+            "description": "Dashboard not visible in the authorized owner context."
+          },
+          "409": {
+            "description": "Outdated revision."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions": {
+      "get": {
+        "summary": "Paginated version overview",
+        "description": "Newest submission first; no complete findings included.",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated version overview."
+          }
+        }
+      },
+      "post": {
+        "summary": "Upload a complete, immutable version and submit it for review",
+        "description": "Single multipart operation (§7.1): a `metadata` JSON part declaring\napiVersion, dataRequirements and the two-file inventory\n(exactly one .js/.mjs entry and one .css), plus the two file parts.\n`dataRequirements` is required: use `{}` or `{cubes: []}` for a\nstatic dashboard with no query access.\nFiles, inventory, apiVersion and dataRequirements cannot be modified\nafterwards; changes create a new version. The server assigns the\nversion label (v<submissionNumber>), versionId, submissionNumber,\nchecksum, digest and all identity fields. Responds 202 only after\nthe review order was accepted by the message broker.\nIdempotency-Key supported.\n",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Version fully accepted, queued for review."
+          },
+          "400": {
+            "description": "Schema, inventory or command validation failed."
+          },
+          "404": {
+            "description": "Dashboard not visible in the authorized owner context."
+          },
+          "409": {
+            "description": "Conflicting idempotency key or a concurrent upload in progress."
+          },
+          "413": {
+            "description": "Size or quantity limit exceeded."
+          },
+          "415": {
+            "description": "Unsupported package or file format."
+          },
+          "503": {
+            "description": "Acceptance could not reliably be completed."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}": {
+      "get": {
+        "summary": "Immutable version metadata and current process projection",
+        "description": "Version metadata includes `dataRequirements` when declared.\n",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Version metadata, review/artifact/appeal state, last event."
+          },
+          "404": {
+            "description": "Version not visible in the authorized owner context."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/review-events": {
+      "get": {
+        "summary": "Chronological review event summaries of the version",
+        "description": "Cursor-paginated ascending by sequence; complete findings only in the single event endpoint.",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event summaries with cursor."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/review-events/{eventId}": {
+      "get": {
+        "summary": "One complete review event including its findings",
+        "description": "Knowing an event id never bypasses the tenant filter.",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The complete event document."
+          },
+          "404": {
+            "description": "Event not visible in the authorized owner context."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/source/{fileName}": {
+      "get": {
+        "summary": "Original source file of the quarantined version package",
+        "description": "Inventory filename only; the original bytes are delivered as text or\ndownload. Quarantine files are never executed and never reachable\nthrough the delivery routes.\n",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fileName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original source bytes of the inventory file."
+          },
+          "404": {
+            "description": "File not part of the version inventory, or its quarantine copy is missing."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/files/{fileName}": {
+      "get": {
+        "summary": "Version-specific delivery of an approved, published artifact",
+        "description": "Protected by the existing read permission. Serves files only after the\nversion was published at least once; a previously published, now\ninactive version stays accessible through its fixed version id.\nQuarantined and never-published candidates are excluded. Registers\nbefore the generic /:fileName routes.\n",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fileName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to the signed blob URL of that version's file."
+          },
+          "404": {
+            "description": "Version not published or file unknown."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/retryReview": {
+      "post": {
+        "summary": "Explicit technical retry of a failed review",
+        "description": "Only from review status failed; assigns a new generation and re-queues the review. Previous events remain.",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "New generation queued."
+          },
+          "409": {
+            "description": "Invalid transition, outdated revision or idempotency conflict."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/cancelReview": {
+      "post": {
+        "summary": "Cancel a queued or running review",
+        "description": "The claim and old messages become invalid; a new submission would be required afterwards.",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision",
+                  "reason"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Review cancelled."
+          },
+          "409": {
+            "description": "Invalid transition or outdated revision."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/acceptFindings": {
+      "post": {
+        "summary": "Accept eligible findings that require customer acceptance",
+        "description": "Only eligible, unresolved customer findings; the policy is reevaluated afterwards.",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision",
+                  "findingEventId",
+                  "findingIds"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer"
+                  },
+                  "findingEventId": {
+                    "type": "string"
+                  },
+                  "findingIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Effective decision, revision and event id."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/appeals": {
+      "post": {
+        "summary": "Submit an appeal for overridable findings",
+        "description": "Requires a completed review with rejected or securityReviewRequired decision and at least one eligible finding; at most one open appeal per version.",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision",
+                  "findingEventId",
+                  "findingIds",
+                  "reason"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer"
+                  },
+                  "findingEventId": {
+                    "type": "string"
+                  },
+                  "findingIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "appeal.status=requested; no automatic change of the effective decision."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/retryPromotion": {
+      "post": {
+        "summary": "Retry provisioning or automatic activation of an approved package",
+        "description": "For an approved version with promotionFailed or a ready version whose automatic activation is still pending. No repeat code review.",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "versionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Promotion continuation accepted."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/activate": {
+      "post": {
+        "summary": "Activate one approved and ready version",
+        "description": "Exactly this version becomes active; all other versions are deactivated. Activating the already active version is idempotent.",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision",
+                  "versionId"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer"
+                  },
+                  "versionId": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Derived versionIdActive, revision and event id."
+          }
+        }
+      }
+    },
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/deactivate": {
+      "post": {
+        "summary": "Deactivate the currently active version",
+        "description": "All versions become inactive; the pending automatic activations are discarded.",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dashboardId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision",
+                  "reason"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "versionIdActive=null, revision and event id."
           }
         }
       }

@@ -9796,6 +9796,110 @@
         }
       }
     },
+    "/org/{orgId}/analytics/dashboards/events/stream": {
+      "get": {
+        "summary": "Live review-event stream for the owner's dashboards",
+        "description": "Authenticated SSE stream (`text/event-stream`) of bounded dashboard\nreview notifications for the token owner. Scope is fixed at connect\nfrom the access token (`orgId` + `orgType`); optional\n`dashboardId`/`versionId` query params narrow further. The server\nnever replays: after connect or reconnect reload the authoritative\nREST state and dedupe by `messageId`. Requires\n`analytics-dashboard-write`.\n",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dashboardId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "versionId",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Open event stream."
+          },
+          "400": {
+            "description": "Invalid dashboard/version filter."
+          },
+          "401": {
+            "description": "Missing or invalid access token."
+          },
+          "403": {
+            "description": "Missing dashboard write scope."
+          }
+        }
+      }
+    },
+    "/bp/{orgId}/analytics/dashboards/events/stream": {
+      "get": {
+        "summary": "Live review-event stream for the business partner's dashboards",
+        "description": "BP twin of the org stream. Scope is fixed at connect from the\nbusiness-partner token (`orgId` + `orgType=bpOrg`); optional\n`dashboardId`/`versionId` narrow further. No server replay; reload\nREST and dedupe by `messageId`. Requires\n`analytics-dashboard-write`.\n",
+        "tags": [
+          "Apps"
+        ],
+        "security": [
+          {
+            "accessToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orgId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dashboardId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "versionId",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Open event stream."
+          },
+          "400": {
+            "description": "Invalid dashboard/version filter."
+          },
+          "401": {
+            "description": "Missing or invalid access token."
+          },
+          "403": {
+            "description": "Missing dashboard write scope."
+          }
+        }
+      }
+    },
     "/bp/{orgId}/analytics/dashboards/{dashboardId}": {
       "get": {
         "summary": "Get one dynamic dashboard for a business partner org (active version only)",

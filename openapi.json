@@ -10633,7 +10633,7 @@
         }
       }
     },
-    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/retryReview": {
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/retry-review": {
       "post": {
         "summary": "Explicit technical retry of a failed review",
         "description": "Only from review status failed; assigns a new generation and re-queues the review. Previous events remain.",
@@ -10701,7 +10701,7 @@
         }
       }
     },
-    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/cancelReview": {
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/cancel-review": {
       "post": {
         "summary": "Cancel a queued or running review",
         "description": "The claim and old messages become invalid; a new submission would be required afterwards.",
@@ -10770,7 +10770,7 @@
         }
       }
     },
-    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/acceptFindings": {
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/accept-findings": {
       "post": {
         "summary": "Accept eligible findings that require customer acceptance",
         "description": "Only eligible, unresolved customer findings; the policy is reevaluated afterwards.",
@@ -10923,7 +10923,7 @@
         }
       }
     },
-    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/retryPromotion": {
+    "/org/{orgId}/analytics/dashboards/{dashboardId}/versions/{versionId}/retry-promotion": {
       "post": {
         "summary": "Retry provisioning or automatic activation of an approved package",
         "description": "For an approved version with promotionFailed or a ready version whose automatic activation is still pending. No repeat code review.",
